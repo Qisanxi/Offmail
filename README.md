@@ -103,7 +103,7 @@ flowchart TB
 ```
 
 **Key points:**
-- The Vercel landing page is static marketing — **no user data ever touches it**
+- The Vercel homepage is static marketing — **no user data ever touches it**
 - Every component on the user's machine runs on `localhost` — no external API calls except IMAP/SMTP to the user's own Gmail
 - The `reply-to` trick routes replies through LinkedIn's published email address → lands as a LinkedIn DM (no scraping, no API ToS violations)
 
@@ -285,7 +285,7 @@ offmail/
 │           ├── HealthBar.jsx
 │           └── Badges.jsx
 │
-├── landing/                   # Vercel marketing page
+├── homepage/                  # Vercel marketing homepage
 │   ├── index.html
 │   └── styles.css
 │
@@ -352,7 +352,7 @@ offmail/
 
 ## Privacy & security
 
-- **No central server.** The deployed Vercel landing page is marketing only — no user data ever touches it.
+- **No central server.** The deployed Vercel homepage is marketing only — no user data ever touches it.
 - **No telemetry.** Zero analytics, zero call-home. Audit the code yourself.
 - **Your Gmail credentials stay on your machine** in `.env` (gitignored).
 - **Your emails stay on your machine** in local SQLite (`offmail.db`, gitignored).

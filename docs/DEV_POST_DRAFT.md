@@ -70,7 +70,7 @@ Offmail answers **yes** to all four. Let me show you how.
                     └─────────────┘
 ```
 
-The deployed Vercel landing page is **marketing only** — static HTML, zero backend, no user data ever touches it. Each user runs their own copy of the FastAPI backend on `localhost:8000`. Their Gmail credentials live in `.env` (gitignored). Their emails and drafts live in `offmail.db` (gitignored SQLite).
+The deployed Vercel homepage is **marketing only** — static HTML, zero backend, no user data ever touches it. Each user runs their own copy of the FastAPI backend on `localhost:8000`. Their Gmail credentials live in `.env` (gitignored). Their emails and drafts live in `offmail.db` (gitignored SQLite).
 
 **There is no Offmail server.**
 
@@ -102,7 +102,7 @@ We just send ordinary email — but the email happens to route through LinkedIn'
 **Yes.** Ollama + Gemma 3 1B run entirely on the user's laptop. Drafting works offline. The only network calls are IMAP (fetch) and SMTP (send) to the user's own Gmail. If offline, drafts queue up locally and auto-send when network returns.
 
 ### 2. "Keep someone's data off a server they don't control?"
-**Yes — completely.** There is no Offmail server. The Vercel landing page is static marketing HTML with zero backend. Each user runs their own copy of the FastAPI backend on `localhost:8000`. Their Gmail credentials live in `.env` (gitignored). Their emails and drafts live in `offmail.db` (gitignored SQLite). No telemetry, no analytics, no call-home.
+**Yes — completely.** There is no Offmail server. The Vercel homepage is static marketing HTML with zero backend. Each user runs their own copy of the FastAPI backend on `localhost:8000`. Their Gmail credentials live in `.env` (gitignored). Their emails and drafts live in `offmail.db` (gitignored SQLite). No telemetry, no analytics, no call-home.
 
 ### 3. "Let you fine-tune, swap models, or change how your agent behaves?"
 **Yes.** Any Ollama model works — change `OLLAMA_MODEL` env var:

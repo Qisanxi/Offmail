@@ -72,7 +72,7 @@ The only network calls are IMAP (fetch) and SMTP (send) to the user's own Gmail.
 If offline, drafts queue up locally and auto-send when network returns.
 
 ### 2. "Keep someone's data off a server they don't control?"
-**Yes — completely.** There is no Offmail server. The Vercel landing page is static
+**Yes — completely.** There is no Offmail server. The Vercel homepage is static
 marketing HTML with zero backend. Each user runs their own copy of the FastAPI backend
 on `localhost:8000`. Their Gmail credentials live in `.env` (gitignored). Their emails and
 drafts live in `offmail.db` (gitignored SQLite). No telemetry, no analytics, no call-home.
@@ -186,7 +186,7 @@ offmail/
 │           ├── HealthBar.tsx
 │           └── Badges.tsx
 │
-├── landing/                   # Vercel marketing page
+├── homepage/                  # Vercel marketing homepage
 │   ├── index.html            # static HTML
 │   ├── styles.css            # custom dark theme
 │   └── package.json
