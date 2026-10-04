@@ -5,8 +5,9 @@
 [![CI](https://github.com/Qisanxi/Offmail/actions/workflows/test.yml/badge.svg)](https://github.com/Qisanxi/Offmail/actions/workflows/test.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![Node](https://img.shields.io/badge/node-18+-green.svg)](https://nodejs.org/)
+[![Node](https://img.shields.io/badge/node-22+-green.svg)](https://nodejs.org/)
 [![React](https://img.shields.io/badge/react-18-61dafb.svg)](https://react.dev/)
+[![Vite 8](https://img.shields.io/badge/vite-8-646cff.svg)](https://vite.dev/blog/announcing-vite8)
 [![Tailwind v4](https://img.shields.io/badge/tailwind-v4-38bdf8.svg)](https://tailwindcss.com/blog/tailwindcss-v4)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://docs.astral.sh/ruff)
 [![Model: Gemma 3 1B](https://img.shields.io/badge/LLM-Gemma%203%201B-orange)](https://ai.google.dev/gemma)
@@ -175,7 +176,7 @@ sequenceDiagram
 
 ### Prerequisites
 - Python 3.10+
-- Node.js 18+
+- Node.js 22.12+ (Vite 8 requires Node 20.19+ or 22.12+)
 - [Ollama](https://ollama.ai) installed
 - A Gmail account with IMAP enabled + an [app password](https://myaccount.google.com/apppasswords)
 
@@ -269,9 +270,9 @@ offmail/
 │   ├── requirements.txt
 │   └── tests/                # 25 tests (classifier, smoke, smtp_sender)
 │
-├── frontend/                  # React + Vite + Tailwind v4 (JavaScript, no TS)
+├── frontend/                  # React + Vite 8 (Oxc) + Tailwind v4 (JavaScript, no TS)
 │   ├── index.html
-│   ├── vite.config.js        # Vite + React + Tailwind v4 plugins
+│   ├── vite.config.js        # Vite + React (Oxc) + Tailwind v4 plugins
 │   ├── package.json
 │   └── src/
 │       ├── main.jsx          # React entry
