@@ -230,7 +230,8 @@ If you approve a draft while offline, SMTP fails — but the draft stays in the 
 ### Security model
 - **Bound to 127.0.0.1 only** — not exposed to LAN
 - **TrustedHostMiddleware** rejects requests with foreign Host headers (DNS-rebinding defense)
-- **Per-install X-Offmail-Token header** required on all mutating routes (CSRF defense — cross-site POSTs can't set custom headers)
+- **Per-install X-Offmail-Token header** required on every route that touches inbox data or sends mail (CSRF defense — cross-site requests can't set custom headers). The Vite dev proxy adds it from `.offmail_token`, so the token never reaches browser JavaScript
+- **Reply-To is only trusted for genuine LinkedIn mail** — replies are routed to a `reply+…@linkedin.com` address only when the email came from linkedin.com; anything else goes to the original sender
 - **Header injection rejected** — EmailMessage with modern policy + manual CR/LF stripping
 
 ---
