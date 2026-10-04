@@ -1,0 +1,10 @@
+{
+  "name": "inboxiq-landing",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "npx serve .",
+    "build": "echo 'static site, no build step'"
+  }
+}
