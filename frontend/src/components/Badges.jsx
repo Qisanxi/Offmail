@@ -1,5 +1,3 @@
-// Category + status badges for the inbox list
-
 export function CategoryBadge({ category }) {
   switch (category) {
     case "linkedin_accepted":
@@ -20,8 +18,12 @@ export function DraftStatusBadge({ status }) {
       return <span className="badge-green">Sent</span>;
     case "approved":
       return <span className="badge-blue">Queued</span>;
+    case "sending":
+      return <span className="badge-yellow">Sending…</span>;
     case "failed":
       return <span className="badge-red">Failed</span>;
+    case "dead":
+      return <span className="badge-red">Dead</span>;
     case "rejected":
       return <span className="badge-gray">Rejected</span>;
     default:

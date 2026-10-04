@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "./lib/api";
 import { EmailCard } from "./components/EmailCard";
 import { InboxList } from "./components/InboxList";
@@ -21,13 +21,28 @@ export default function App() {
   const [stats, setStats] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
+  // AbortController for in-flight email loads — prevents out-of-order responses
+  const loadAbortRef = useRef(null);
+
   const loadEmails = useCallback(async () => {
+    // Cancel any in-flight request
+    if (loadAbortRef.current) loadAbortRef.current.abort();
+    const controller = new AbortController();
+    loadAbortRef.current = controller;
     try {
-      const list =
-        filter === "all" ? await api.listEmails() : await api.listEmails(filter);
-      setEmails(list);
+      const list = await api.listEmails(filter === "all" ? undefined : filter, controller.signal);
+      if (!controller.signal.aborted) {
+        setEmails(list);
+        // If we have a selected email, refresh it from the new list so its
+        // draft state stays in sync (e.g. after a draft is generated elsewhere)
+        setSelected((prev) => {
+          if (!prev) return prev;
+          const updated = list.find((e) => e.id === prev.id);
+          return updated || prev;
+        });
+      }
     } catch (e) {
-      console.error(e);
+      if (e.name !== "AbortError") console.error(e);
     }
   }, [filter]);
 
@@ -46,6 +61,17 @@ export default function App() {
   useEffect(() => {
     loadStats();
   }, [loadStats, refreshKey]);
+
+  // Periodic refresh of stats + queue while drafts are pending (so user
+  // sees when the background loop sends them)
+  useEffect(() => {
+    if (!stats || stats.approved_pending_send === 0 && stats.failed === 0 && stats.sending === 0) return;
+    const t = setInterval(() => {
+      loadStats();
+      setRefreshKey((k) => k + 1);
+    }, 15000);
+    return () => clearInterval(t);
+  }, [stats, loadStats]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -72,7 +98,6 @@ export default function App() {
 
   return (
     <div className="min-h-screen">
-      {/* Header */}
       <header className="bg-white border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -92,8 +117,14 @@ export default function App() {
                 <span>{stats.emails} emails</span>
                 <span className="text-emerald-600">{stats.sent} sent</span>
                 <span className="text-blue-600">{stats.approved_pending_send} queued</span>
+                {stats.sending > 0 && (
+                  <span className="text-amber-600">{stats.sending} sending</span>
+                )}
                 {stats.failed > 0 && (
                   <span className="text-rose-600">{stats.failed} failed</span>
+                )}
+                {stats.dead > 0 && (
+                  <span className="text-rose-700">{stats.dead} dead</span>
                 )}
               </div>
             )}
@@ -109,13 +140,11 @@ export default function App() {
       </header>
 
       <main className="max-w-7xl mx-auto px-6 py-6">
-        {/* Privacy banner */}
         <div className="mb-4">
           <HealthBar />
         </div>
 
         <div className="grid grid-cols-12 gap-6">
-          {/* Inbox list */}
           <div className="col-span-12 lg:col-span-5">
             <div className="flex items-center gap-2 mb-3 overflow-x-auto pb-1">
               {Object.keys(CATEGORY_LABELS).map((key) => (
@@ -139,12 +168,10 @@ export default function App() {
             />
           </div>
 
-          {/* Email detail / draft editor */}
           <div className="col-span-12 lg:col-span-5">
             <EmailCard email={selected} onDraftUpdated={handleDraftUpdated} />
           </div>
 
-          {/* Send queue */}
           <div className="col-span-12 lg:col-span-2">
             <SendQueue refreshKey={refreshKey} />
           </div>

@@ -2,13 +2,11 @@ import { useEffect, useState } from "react";
 import { api } from "../lib/api";
 import { CategoryBadge, DraftStatusBadge } from "./Badges";
 
-// Props:
-//   email: EmailOut | null
-//   onDraftUpdated: () => void
 export function EmailCard({ email, onDraftUpdated }) {
   const [draft, setDraft] = useState("");
   const [draftId, setDraftId] = useState(null);
   const [draftStatus, setDraftStatus] = useState(null);
+  const [draftSentAt, setDraftSentAt] = useState(null);
   const [generating, setGenerating] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState(null);
@@ -18,6 +16,7 @@ export function EmailCard({ email, onDraftUpdated }) {
     setDraft(email?.draft_body || "");
     setDraftId(email?.draft_id || null);
     setDraftStatus(email?.draft_status || null);
+    setDraftSentAt(null);
     setError(null);
     setEditing(false);
   }, [email?.id]);
@@ -39,6 +38,7 @@ export function EmailCard({ email, onDraftUpdated }) {
       setDraft(result.body);
       setDraftId(result.id);
       setDraftStatus(result.status);
+      setDraftSentAt(result.sent_at);
       onDraftUpdated();
     } catch (e) {
       setError(e.message);
@@ -54,6 +54,7 @@ export function EmailCard({ email, onDraftUpdated }) {
     try {
       const result = await api.approveDraft(draftId, draft);
       setDraftStatus(result.status);
+      setDraftSentAt(result.sent_at);
       setEditing(false);
       onDraftUpdated();
     } catch (e) {
@@ -78,6 +79,10 @@ export function EmailCard({ email, onDraftUpdated }) {
   const isSent = draftStatus === "sent";
   const isApproved = draftStatus === "approved";
   const isRejected = draftStatus === "rejected";
+  const isDead = draftStatus === "dead";
+
+  // Show Generate when: no draft yet, OR draft was rejected (allow regenerate)
+  const showGenerate = (!draft || isRejected) && !generating;
 
   return (
     <div className="card p-5">
@@ -113,13 +118,13 @@ export function EmailCard({ email, onDraftUpdated }) {
 
       <div className="mb-3 flex items-center justify-between">
         <h3 className="text-sm font-semibold text-slate-700">Draft reply</h3>
-        {!draft && !generating && (
+        {showGenerate && (
           <button
             onClick={handleGenerate}
             className="btn-secondary"
-            disabled={isSent || isApproved || isRejected}
+            disabled={isSent || isApproved || isDead}
           >
-            ✨ Generate draft
+            {isRejected ? "🔄 Regenerate draft" : "✨ Generate draft"}
           </button>
         )}
       </div>
@@ -130,7 +135,7 @@ export function EmailCard({ email, onDraftUpdated }) {
         </div>
       )}
 
-      {draft && (
+      {draft && !isRejected && (
         <>
           <textarea
             value={draft}
@@ -141,7 +146,7 @@ export function EmailCard({ email, onDraftUpdated }) {
           />
 
           <div className="mt-3 flex flex-wrap gap-2">
-            {!isSent && !isRejected && (
+            {!isSent && !isRejected && !isDead && (
               <>
                 {!editing && !isApproved && (
                   <button
@@ -170,18 +175,23 @@ export function EmailCard({ email, onDraftUpdated }) {
             )}
             {isSent && (
               <div className="text-sm text-emerald-700">
-                ✅ Sent {new Date().toLocaleString()}
+                ✅ Sent {draftSentAt ? new Date(draftSentAt).toLocaleString() : ""}
               </div>
             )}
             {isRejected && (
-              <div className="text-sm text-slate-500">Dismissed</div>
+              <div className="text-sm text-slate-500">Dismissed — click Regenerate to try again</div>
+            )}
+            {isDead && (
+              <div className="text-sm text-rose-700">
+                Failed after multiple attempts. Click "Retry failed" in the queue panel.
+              </div>
             )}
           </div>
 
           {isApproved && !isSent && (
             <div className="mt-3 text-xs text-blue-700 bg-blue-50 border border-blue-100 rounded p-2">
               Queued for send. Background loop will attempt SMTP delivery within ~60s.
-              If you're offline, drafts auto-send when network returns.
+              If you're offline, drafts auto-send when network returns (with backoff).
             </div>
           )}
         </>
