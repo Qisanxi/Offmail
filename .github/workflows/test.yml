@@ -9,6 +9,10 @@ on:
 jobs:
   backend-tests:
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: "sqlite:///:memory:"
+      GMAIL_ADDRESS: "test@test.com"
+      GMAIL_APP_PASSWORD: "testpass"
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python
@@ -19,7 +23,10 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r backend/requirements.txt
-          pip install pytest
+          pip install ruff
+      - name: Lint with ruff
+        run: |
+          ruff check backend/
       - name: Run tests
         run: |
           python -m pytest backend/tests/ -v

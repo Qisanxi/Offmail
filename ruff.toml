@@ -1,0 +1,18 @@
+# Ruff configuration — Offmail
+# Docs: https://docs.astral.sh/ruff/configuration/
+
+target-version = "py310"
+line-length = 100
+
+[lint]
+# Default rules: E (pycodestyle errors), F (pyflakes), I (isort)
+select = ["E", "F", "I", "W", "B", "UP"]
+ignore = [
+    "E501",   # line-too-long — handled by line-length
+    "B008",   # function call in default arg — FastAPI Depends() pattern
+    "B904",   # raise from — we intentionally rewrite errors with friendly messages
+    "UP007",  # X | Y in annotations — keep Optional/Union for clarity
+]
+
+[lint.per-file-ignores]
+"backend/tests/*" = ["F401", "E402"]  # tests set env vars before imports
