@@ -1,15 +1,16 @@
-"""SQLite database engine + session factory."""
+"""SQLAlchemy database engine + session factory + init_db()."""
 from __future__ import annotations
 
+from collections.abc import Iterator
 from contextlib import contextmanager
-from typing import Iterator
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from .config import settings
+from .models import Base  # noqa: F401  (imported so create_all sees all tables)
 
-# SQLite needs check_same_thread=False for FastAPI
+# SQLite needs check_same_thread=False for FastAPI sync routes run in threadpool
 connect_args = (
     {"check_same_thread": False}
     if settings.database_url.startswith("sqlite")
@@ -33,3 +34,8 @@ def get_db() -> Iterator[Session]:
         yield db
     finally:
         db.close()
+
+
+def init_db() -> None:
+    """Create all tables. Called on app startup. Lives here because it owns `engine`."""
+    Base.metadata.create_all(bind=engine)

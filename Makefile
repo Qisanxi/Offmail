@@ -5,7 +5,7 @@ help: ## Show this help
 
 setup: ## Install Python + Node dependencies
 	@echo "=== Installing Python deps ==="
-	cd backend && pip install -r requirements.txt
+	pip install -r backend/requirements.txt
 	@echo "=== Installing Node deps ==="
 	cd frontend && npm install
 	@echo "=== Done. Copy .env.example to .env and fill in Gmail creds. ==="
@@ -15,33 +15,34 @@ ollama-check: ## Verify Ollama is running and Gemma 3 1B is pulled
 	@curl -s http://localhost:11434/api/tags | grep -q "gemma3:1b" || { echo "Pulling gemma3:1b..."; ollama pull gemma3:1b; }
 	@echo "Ollama + Gemma 3 1B ready."
 
-backend: ## Run FastAPI backend (port 8000)
-	cd backend && uvicorn main:app --reload --host 0.0.0.0 --port 8000
+backend: ## Run FastAPI backend (port 8000, localhost only)
+	@echo "=== Starting backend (127.0.0.1:8000) ==="
+	@echo "=== Per-install auth token: $$(cat .offmail_token 2>/dev/null || echo 'will be generated on first run') ==="
+	uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
 
 frontend: ## Run Vite dev server (port 5173)
+	@echo "=== Starting frontend (http://localhost:5173) ==="
 	cd frontend && npm run dev
 
 run: ollama-check ## Start backend + frontend in parallel
-	@echo "=== Starting Offmail ==="
 	@trap 'kill 0' INT; \
 	$(MAKE) backend & \
 	$(MAKE) frontend & \
 	wait
 
 stop: ## Kill running backend + frontend
-	@pkill -f "uvicorn main:app" || true
+	@pkill -f "uvicorn backend.main:app" || true
 	@pkill -f "vite" || true
 	@echo "Stopped."
 
 test: ## Run backend tests
-	cd backend && pytest -v
+	python -m pytest backend/tests/ -v
 
-lint: ## Lint Python + TS
-	cd backend && ruff check .
-	cd frontend && npm run lint
+lint: ## Lint Python (ruff)
+	ruff check backend/
 
 clean: ## Remove caches + build artifacts
 	rm -rf backend/__pycache__ backend/.pytest_cache backend/.ruff_cache
 	rm -rf frontend/node_modules frontend/dist
-	rm -f backend/offmail.db
+	rm -f offmail.db offmail.db-journal .offmail_token
 	@echo "Cleaned."
