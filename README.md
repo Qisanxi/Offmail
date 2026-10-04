@@ -8,6 +8,7 @@
 [![Node](https://img.shields.io/badge/node-18+-green.svg)](https://nodejs.org/)
 [![React](https://img.shields.io/badge/react-18-61dafb.svg)](https://react.dev/)
 [![Tailwind v4](https://img.shields.io/badge/tailwind-v4-38bdf8.svg)](https://tailwindcss.com/blog/tailwindcss-v4)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://docs.astral.sh/ruff)
 [![Model: Gemma 3 1B](https://img.shields.io/badge/LLM-Gemma%203%201B-orange)](https://ai.google.dev/gemma)
 [![Hacktoberfest 2026](https://img.shields.io/badge/Hacktoberfest-2026-purple)](https://hacktoberfest.com)
 [![Local-first](https://img.shields.io/badge/architecture-local--first-success)](#why-this-exists)
@@ -203,43 +204,40 @@ Open http://localhost:5173 — you should see the Offmail UI.
 
 ## How it works
 
-### 1. Poll Gmail Social tab via IMAP
-Using `imap-tools`, we fetch only the Social folder — that's where LinkedIn notifications land.
+### 1. Poll Gmail Social category via IMAP + X-GM-RAW
+Using `imap-tools`, we fetch the Social category via Gmail's `X-GM-RAW "category:social"` search extension. Gmail doesn't expose Social/Promotions as IMAP folders — they're labels — so we use the X-GM-RAW extension to filter within INBOX.
 
-### 2. Classify locally (regex, no LLM)
+### 2. Classify locally (regex, no LLM, sender-restricted)
 A regex-based classifier tags each email as:
-- `linkedin_accepted` — LinkedIn "accepted your invitation" notifications
+- `linkedin_accepted` — LinkedIn "accepted your invitation" notifications (sender must be `linkedin.com`)
 - `needs_reply` — emails with reply-intent phrases ("please reply", "let's schedule a call")
-- `fyi` — digests, no-reply, "people you may know"
+- `fyi` — digests, no-reply, "people you may know" (subject + sender only, not body)
 - `unknown` — everything else
 
-We use regex (not the LLM) for classification because it's instant, deterministic, and uses zero tokens. The LLM is reserved for drafting — that's where it adds value.
+The classifier is sender-aware: a newsletter quoting "accepted your invitation" is NOT misclassified because we require the From domain to be `linkedin.com`.
 
 ### 3. Draft with Gemma 3 1B (local)
-A tight system prompt enforces:
-- Tone: friendly-professional
-- Length: under 80 words
-- No invented facts
-- Always end with a soft next-step
-
-Inference takes 10–20s on a 4GB RAM laptop. We show this honestly in the UI.
+A tight system prompt enforces tone, length, content rules. Email body is treated as untrusted data (delimited in the prompt to prevent prompt injection). Output is trimmed to last complete sentence to avoid mid-sentence truncation from `num_predict`.
 
 ### 4. User reviews → approves → queued
-You edit the draft if needed, hit "Approve & queue". Draft is stored in SQLite with status `approved`.
+You edit the draft if needed, hit "Approve & queue". Draft is stored in SQLite with status `approved`. After rejecting a draft, you can regenerate with one click.
 
-### 5. Background sender flushes queue
-An asyncio loop runs every 60 seconds. It fetches all `approved` drafts and sends them via Gmail SMTP.
+### 5. Background sender flushes queue (atomic claim, no double-send)
+An asyncio loop runs every 60 seconds. It atomically transitions drafts from `approved` → `sending` via an atomic `UPDATE ... WHERE status='approved'` query — preventing the race condition where the background loop and a manual flush both pick the same draft. After send, status moves to `sent` (success) or `failed` (with backoff retry).
 
-### 6. Reply routes via LinkedIn's `reply-to`
-This is the clever bit. LinkedIn's "accepted your invitation" emails have a `reply-to` header like `reply+abc123@linkedin.com`. When you reply to that address via email, LinkedIn routes your reply **as a LinkedIn message to that person**. So:
-- ✅ No LinkedIn API needed (they don't allow sending messages anyway)
-- ✅ No scraping (we read your own email, not LinkedIn)
-- ✅ No browser automation (which gets accounts banned)
+### 6. Reply routes via LinkedIn's `reply-to` (sender-authenticated)
+The `To` header on the outgoing email is set to LinkedIn's `reply+xxx@linkedin.com` address (extracted from the original email's `Reply-To` header, parsed with `email.utils.parseaddr` to handle `Name <addr>` format). The message lands as a LinkedIn DM.
 
-We just send ordinary email — but it happens to land as a LinkedIn DM. ToS-compliant.
+We only treat an email as LinkedIn acceptance if the sender domain is `linkedin.com`. A spoofed email from `attacker@evil.com` containing "accepted your invitation" will NOT trigger LinkedIn routing.
 
-### 7. Offline-first queue
-If you approve a draft while offline, the SMTP send fails — but the draft stays in the queue. The background loop retries every 60s. When network returns, drafts auto-send. No user intervention needed.
+### 7. Offline-first queue with exponential backoff
+If you approve a draft while offline, SMTP fails — but the draft stays in the queue as `failed` with a backoff schedule (60s, 120s, 240s, 480s, 960s). The background loop auto-retries. After 5 attempts, the draft moves to `dead` state and requires manual retry.
+
+### Security model
+- **Bound to 127.0.0.1 only** — not exposed to LAN
+- **TrustedHostMiddleware** rejects requests with foreign Host headers (DNS-rebinding defense)
+- **Per-install X-Offmail-Token header** required on all mutating routes (CSRF defense — cross-site POSTs can't set custom headers)
+- **Header injection rejected** — EmailMessage with modern policy + manual CR/LF stripping
 
 ---
 
@@ -258,16 +256,18 @@ offmail/
 │
 ├── backend/                   # FastAPI Python backend
 │   ├── __init__.py
-│   ├── main.py               # API routes + lifespan
+│   ├── main.py               # API routes + lifespan + middleware
+│   ├── auth.py               # per-install X-Offmail-Token (CSRF defense)
 │   ├── config.py             # env loading (dataclass-based)
-│   ├── db.py                 # SQLAlchemy engine + session
-│   ├── models.py             # Email, Draft, Contact schemas
-│   ├── imap_client.py        # Gmail Social folder polling
-│   ├── classifier.py         # regex-based category detection
-│   ├── llm.py                # Ollama + Gemma wrapper
-│   ├── smtp_sender.py        # Gmail SMTP send
-│   ├── queue.py              # background sender loop + offline queue
-│   └── requirements.txt
+│   ├── db.py                 # SQLAlchemy engine + session + init_db()
+│   ├── models.py             # Email, Draft, Contact + DraftStatus (sending/dead)
+│   ├── imap_client.py        # Gmail Social polling via X-GM-RAW search
+│   ├── classifier.py         # sender-aware regex classifier
+│   ├── llm.py                # Ollama + Gemma wrapper (timeout/404/empty guarded)
+│   ├── smtp_sender.py        # EmailMessage builder + header injection guard
+│   ├── send_queue.py         # atomic claim + backoff retry + DEAD state
+│   ├── requirements.txt
+│   └── tests/                # 25 tests (classifier, smoke, smtp_sender)
 │
 ├── frontend/                  # React + Vite + Tailwind v4 (JavaScript, no TS)
 │   ├── index.html

@@ -1,9 +1,8 @@
 # ============ Secrets ============
 .env
-*.env
-!env.example
 .env.local
 .env.*.local
+.offmail_token
 
 # ============ Python ============
 __pycache__/
@@ -40,8 +39,7 @@ pnpm-debug.log*
 *.db
 *.sqlite
 *.sqlite3
-inboxiq.db
-inboxiq.db-journal
+*.db-journal
 
 # ============ OS junk ============
 .DS_Store
@@ -56,7 +54,7 @@ desktop.ini
 *~
 
 # ============ Build artifacts ============
-landing/dist/
+homepage/dist/
 *.tar.gz
 *.zip
 
