@@ -1,21 +1,13 @@
 # Offmail
 
-> Local-first email triage for job seekers. Built for **Arpit** — a job seeker who sends 20+ LinkedIn connection requests a week and never manages to reply when recruiters accept.
-
 [![CI](https://github.com/Qisanxi/Offmail/actions/workflows/test.yml/badge.svg)](https://github.com/Qisanxi/Offmail/actions/workflows/test.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![Node](https://img.shields.io/badge/node-22+-green.svg)](https://nodejs.org/)
-[![React](https://img.shields.io/badge/react-18-61dafb.svg)](https://react.dev/)
-[![Vite 8](https://img.shields.io/badge/vite-8-646cff.svg)](https://vite.dev/blog/announcing-vite8)
-[![Tailwind v4](https://img.shields.io/badge/tailwind-v4-38bdf8.svg)](https://tailwindcss.com/blog/tailwindcss-v4)
-[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://docs.astral.sh/ruff)
 [![Model: Gemma 3 1B](https://img.shields.io/badge/LLM-Gemma%203%201B-orange)](https://ai.google.dev/gemma)
 [![Hacktoberfest 2026](https://img.shields.io/badge/Hacktoberfest-2026-purple)](https://hacktoberfest.com)
 [![Local-first](https://img.shields.io/badge/architecture-local--first-success)](#why-this-exists)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
-Offmail reads your Gmail's Social tab locally, detects LinkedIn "connection accepted" emails, drafts a personalized reply using **Gemma 3 1B** running on your laptop via Ollama, and you hit send — routed via LinkedIn's `reply-to` email address so it lands as a LinkedIn DM. Your inbox never leaves your machine.
+>Offmail reads your Gmail's Social tab locally, detects LinkedIn "connection accepted" emails, drafts a personalized reply using **Gemma 3 1B** running on your laptop via Ollama, and you hit send — routed via LinkedIn's `reply-to` email address so it lands as a LinkedIn DM. Your inbox never leaves your machine.
 
 Submitted for the **Hacktoberfest 2026 Weekend DEV Challenge** — theme: *Build for a Friend*.
 
