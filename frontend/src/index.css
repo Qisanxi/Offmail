@@ -1,48 +1,106 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Tailwind v4 — CSS-first config (no tailwind.config.js needed) */
+@import "tailwindcss";
 
-@layer base {
-  html {
-    @apply antialiased;
-  }
-  body {
-    @apply bg-slate-50 text-slate-900;
-  }
+/* Theme: brand color + custom fonts */
+@theme {
+  --color-brand-50: #eef6ff;
+  --color-brand-100: #d9eaff;
+  --color-brand-500: #3b82f6;
+  --color-brand-600: #2563eb;
+  --color-brand-700: #1d4ed8;
+
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
 }
 
-@layer components {
-  .btn {
-    @apply inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors;
-  }
-  .btn-primary {
-    @apply btn bg-brand-600 text-white hover:bg-brand-700 disabled:bg-slate-300;
-  }
-  .btn-secondary {
-    @apply btn bg-white border border-slate-200 text-slate-700 hover:bg-slate-50;
-  }
-  .btn-ghost {
-    @apply btn text-slate-600 hover:bg-slate-100;
-  }
-  .card {
-    @apply bg-white border border-slate-200 rounded-lg shadow-sm;
-  }
-  .badge {
-    @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium;
-  }
-  .badge-blue {
-    @apply badge bg-blue-50 text-blue-700 border border-blue-100;
-  }
-  .badge-yellow {
-    @apply badge bg-amber-50 text-amber-700 border border-amber-100;
-  }
-  .badge-green {
-    @apply badge bg-emerald-50 text-emerald-700 border border-emerald-100;
-  }
-  .badge-gray {
-    @apply badge bg-slate-100 text-slate-600 border border-slate-200;
-  }
-  .badge-red {
-    @apply badge bg-rose-50 text-rose-700 border border-rose-100;
-  }
+/* Component utilities — v4 lets us define custom utilities with @utility */
+@utility btn {
+  @inline-flex items-center gap-2;
+  border-radius: 0.375rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition-property: color, background-color, border-color;
+  transition-duration: 150ms;
+}
+
+@utility btn-primary {
+  @apply btn;
+  background-color: var(--color-brand-600);
+  color: white;
+}
+.btn-primary:hover { background-color: var(--color-brand-700); }
+.btn-primary:disabled { background-color: #cbd5e1; }
+
+@utility btn-secondary {
+  @apply btn;
+  background-color: white;
+  border: 1px solid #e2e8f0;
+  color: #334155;
+}
+.btn-secondary:hover { background-color: #f8fafc; }
+
+@utility btn-ghost {
+  @apply btn;
+  color: #475569;
+}
+.btn-ghost:hover { background-color: #f1f5f9; }
+
+@utility card {
+  background-color: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05);
+}
+
+@utility badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+@utility badge-blue {
+  @apply badge;
+  background-color: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #dbeafe;
+}
+
+@utility badge-yellow {
+  @apply badge;
+  background-color: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fef3c7;
+}
+
+@utility badge-green {
+  @apply badge;
+  background-color: #ecfdf5;
+  color: #047857;
+  border: 1px solid #d1fae5;
+}
+
+@utility badge-gray {
+  @apply badge;
+  background-color: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+@utility badge-red {
+  @apply badge;
+  background-color: #fff1f2;
+  color: #be123c;
+  border: 1px solid #ffe4e6;
+}
+
+/* Base body styles */
+body {
+  background-color: #f8fafc;
+  color: #0f172a;
+  -webkit-font-smoothing: antialiased;
+  font-family: var(--font-sans);
 }

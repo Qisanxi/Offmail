@@ -6,6 +6,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Node](https://img.shields.io/badge/node-18+-green.svg)](https://nodejs.org/)
+[![React](https://img.shields.io/badge/react-18-61dafb.svg)](https://react.dev/)
+[![Tailwind v4](https://img.shields.io/badge/tailwind-v4-38bdf8.svg)](https://tailwindcss.com/blog/tailwindcss-v4)
 [![Model: Gemma 3 1B](https://img.shields.io/badge/LLM-Gemma%203%201B-orange)](https://ai.google.dev/gemma)
 [![Hacktoberfest 2026](https://img.shields.io/badge/Hacktoberfest-2026-purple)](https://hacktoberfest.com)
 [![Local-first](https://img.shields.io/badge/architecture-local--first-success)](#why-this-exists)
@@ -267,16 +269,14 @@ offmail/
 │   ├── queue.py              # background sender loop + offline queue
 │   └── requirements.txt
 │
-├── frontend/                  # React + Vite + Tailwind (JavaScript, no TS)
+├── frontend/                  # React + Vite + Tailwind v4 (JavaScript, no TS)
 │   ├── index.html
-│   ├── vite.config.js
-│   ├── tailwind.config.js
-│   ├── postcss.config.js
+│   ├── vite.config.js        # Vite + React + Tailwind v4 plugins
 │   ├── package.json
 │   └── src/
 │       ├── main.jsx          # React entry
 │       ├── App.jsx           # main shell
-│       ├── index.css        # Tailwind + components
+│       ├── index.css        # Tailwind v4 (CSS-first config via @theme + @utility)
 │       ├── lib/api.js        # API client with JSDoc types
 │       └── components/
 │           ├── InboxList.jsx
@@ -341,6 +341,7 @@ offmail/
 - OAuth for Gmail (instead of app passwords)
 - Switch SQLite → Postgres (already installed) for multi-user sync
 - Optional encrypted cross-device sync server (Render)
+- **React Router** for multi-page navigation (settings, history, contacts pages)
 
 ### v3
 - Mobile companion (React Native + llama.cpp for on-device inference)
