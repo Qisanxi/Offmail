@@ -1,32 +1,17 @@
-export function CategoryBadge({ category }) {
-  switch (category) {
-    case "linkedin_accepted":
-      return <span className="badge-blue">LinkedIn accepted</span>;
-    case "needs_reply":
-      return <span className="badge-yellow">Needs reply</span>;
-    case "fyi":
-      return <span className="badge-gray">FYI</span>;
-    default:
-      return <span className="badge-gray">Unknown</span>;
-  }
-}
+// Compact status indicators. Emojis removed — plain text + color.
 
 export function DraftStatusBadge({ status }) {
   if (!status) return null;
-  switch (status) {
-    case "sent":
-      return <span className="badge-green">Sent</span>;
-    case "approved":
-      return <span className="badge-blue">Queued</span>;
-    case "sending":
-      return <span className="badge-yellow">Sending…</span>;
-    case "failed":
-      return <span className="badge-red">Failed</span>;
-    case "dead":
-      return <span className="badge-red">Dead</span>;
-    case "rejected":
-      return <span className="badge-gray">Rejected</span>;
-    default:
-      return <span className="badge-gray">Draft</span>;
-  }
+  const map = {
+    pending: { label: "Draft", cls: "badge-gray" },
+    approved: { label: "Queued", cls: "badge-blue" },
+    sending: { label: "Sending", cls: "badge-yellow" },
+    sent: { label: "Sent", cls: "badge-green" },
+    failed: { label: "Failed", cls: "badge-red" },
+    dead: { label: "Dead", cls: "badge-red" },
+    rejected: { label: "Dismissed", cls: "badge-gray" },
+  };
+  const m = map[status];
+  if (!m) return null;
+  return <span className={m.cls}>{m.label}</span>;
 }

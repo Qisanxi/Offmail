@@ -14,6 +14,9 @@ const BASE = "/api";
  * @property {string} category
  * @property {string} received_at
  * @property {string|null} contact_name
+ * @property {string|null} contact_headline  // e.g. "Recruiter at Stripe"
+ * @property {string|null} destination_label  // e.g. "Sends as a LinkedIn message"
+ * @property {boolean} safe_to_auto_send      // false when reply-to is unsafe
  * @property {string|null} draft_id
  * @property {string|null} draft_body
  * @property {string|null} draft_status
@@ -129,6 +132,16 @@ export const api = {
     fetchJSON(
       `${BASE}/emails/${emailId}/draft`,
       { method: "POST" },
+      { requireAuth: true }
+    ),
+
+  regenerateDraft: (emailId, variant, existingBody) =>
+    fetchJSON(
+      `${BASE}/emails/${emailId}/regenerate`,
+      {
+        method: "POST",
+        body: JSON.stringify({ variant, existing_body: existingBody }),
+      },
       { requireAuth: true }
     ),
 
