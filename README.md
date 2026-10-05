@@ -11,7 +11,6 @@
 
 Submitted for the **Hacktoberfest 2026 Weekend DEV Challenge** — theme: *Build for a Friend*.
 
-
 ## Why this exists
 
 Closed inbox-AI tools (Superhuman, Shortwave, etc.) read your emails on their servers. That means:
