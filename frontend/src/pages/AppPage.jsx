@@ -3,15 +3,15 @@ import { Link } from "react-router-dom";
 import { api } from "../lib/api";
 import { EmailCard } from "../components/EmailCard";
 import { InboxList } from "../components/InboxList";
-import { SendQueue } from "../components/SendQueue";
+import { Outbox } from "../components/Outbox";
 import { HealthBar } from "../components/HealthBar";
 
 const CATEGORY_LABELS = {
   all: "All",
-  linkedin_accepted: "LinkedIn accepted",
+  linkedin_accepted: "LinkedIn",
   needs_reply: "Needs reply",
   fyi: "FYI",
-  unknown: "Unknown",
+  unknown: "Other",
 };
 
 export function AppPage() {
@@ -19,23 +19,31 @@ export function AppPage() {
   const [selected, setSelected] = useState(null);
   const [filter, setFilter] = useState("all");
   const [refreshing, setRefreshing] = useState(false);
+  const [refreshError, setRefreshError] = useState(null);
   const [stats, setStats] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [isOnline, setIsOnline] = useState(
+    typeof navigator !== "undefined" ? navigator.onLine : true
+  );
+  const [isSending, setIsSending] = useState(false);
 
-  // AbortController for in-flight email loads — prevents out-of-order responses
+  // Track previous "sending" count to detect when we just started sending (animates outbox edge)
+  const prevSendingRef = useRef(0);
+
+  // AbortController for in-flight email loads
   const loadAbortRef = useRef(null);
 
   const loadEmails = useCallback(async () => {
-    // Cancel any in-flight request
     if (loadAbortRef.current) loadAbortRef.current.abort();
     const controller = new AbortController();
     loadAbortRef.current = controller;
     try {
-      const list = await api.listEmails(filter === "all" ? undefined : filter, controller.signal);
+      const list = await api.listEmails(
+        filter === "all" ? undefined : filter,
+        controller.signal
+      );
       if (!controller.signal.aborted) {
         setEmails(list);
-        // If we have a selected email, refresh it from the new list so its
-        // draft state stays in sync (e.g. after a draft is generated elsewhere)
         setSelected((prev) => {
           if (!prev) return prev;
           const updated = list.find((e) => e.id === prev.id);
@@ -49,7 +57,12 @@ export function AppPage() {
 
   const loadStats = useCallback(async () => {
     try {
-      setStats(await api.stats());
+      const s = await api.stats();
+      // Detect transition into "sending" state
+      if (s.sending > prevSendingRef.current) setIsSending(true);
+      if (s.sending === 0) setIsSending(false);
+      prevSendingRef.current = s.sending;
+      setStats(s);
     } catch (e) {
       console.error(e);
     }
@@ -63,10 +76,24 @@ export function AppPage() {
     loadStats();
   }, [loadStats, refreshKey]);
 
-  // Periodic refresh of stats + queue while drafts are pending (so user
-  // sees when the background loop sends them)
+  // Online/offline detection — drives the outbox's "X replies waiting" copy
   useEffect(() => {
-    if (!stats || stats.approved_pending_send === 0 && stats.failed === 0 && stats.sending === 0) return;
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
+  // Periodic refresh while drafts are pending — so user sees when the outbox sends them
+  useEffect(() => {
+    if (!stats) return;
+    const hasPending =
+      stats.approved_pending_send > 0 || stats.failed > 0 || stats.sending > 0;
+    if (!hasPending) return;
     const t = setInterval(() => {
       loadStats();
       setRefreshKey((k) => k + 1);
@@ -74,23 +101,52 @@ export function AppPage() {
     return () => clearInterval(t);
   }, [stats, loadStats]);
 
+  // Keyboard shortcuts — j/k navigate, a approve, e edit, d dismiss
+  useEffect(() => {
+    function handleKey(e) {
+      // Don't hijack typing
+      const target = e.target;
+      if (target && (target.tagName === "TEXTAREA" || target.tagName === "INPUT" || target.isContentEditable)) {
+        return;
+      }
+      // Skip if modifier keys
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+      if (e.key === "j" || e.key === "ArrowDown") {
+        e.preventDefault();
+        moveSelection(1);
+      } else if (e.key === "k" || e.key === "ArrowUp") {
+        e.preventDefault();
+        moveSelection(-1);
+      }
+      // a / e / d are handled inside EmailCard via document-level listener below
+    }
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [emails, selected]);
+
+  function moveSelection(delta) {
+    if (emails.length === 0) return;
+    const currentIndex = selected ? emails.findIndex((e) => e.id === selected.id) : -1;
+    const nextIndex = (currentIndex + delta + emails.length) % emails.length;
+    setSelected(emails[nextIndex]);
+  }
+
   const handleRefresh = async () => {
     setRefreshing(true);
+    setRefreshError(null);
     try {
       await api.refreshInbox();
       await loadEmails();
       setRefreshKey((k) => k + 1);
     } catch (e) {
-      alert(`Refresh failed: ${e.message}`);
+      setRefreshError(e.message);
     } finally {
       setRefreshing(false);
     }
   };
 
-  const handleSelect = (email) => {
-    setSelected(email);
-  };
-
+  const handleSelect = (email) => setSelected(email);
   const handleDraftUpdated = () => {
     loadEmails();
     loadStats();
@@ -99,97 +155,138 @@ export function AppPage() {
 
   return (
     <div className="min-h-screen">
-      <header className="bg-white border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-            <div className="w-9 h-9 rounded-lg bg-brand-600 flex items-center justify-center text-white font-bold">
+      <header className="bg-[var(--color-surface)] border-b" style={{ borderColor: "var(--color-border-soft)" }}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
+          <Link to="/" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
+            <div
+              className="w-8 h-8 rounded flex items-center justify-center font-bold text-sm"
+              style={{ background: "var(--color-accent)", color: "var(--color-accent-contrast)" }}
+              aria-hidden="true"
+            >
               OM
             </div>
             <div>
-              <h1 className="text-lg font-semibold text-slate-900">Offmail</h1>
-              <p className="text-xs text-slate-500">
-                Local-first email triage · built for Arpit
+              <h1 className="text-base font-semibold leading-none" style={{ color: "var(--color-ink-strong)" }}>
+                Offmail
+              </h1>
+              <p className="text-xs leading-tight mt-0.5" style={{ color: "var(--color-ink-muted)" }}>
+                Local-first email triage
               </p>
             </div>
           </Link>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             {stats && (
-              <div className="hidden md:flex items-center gap-4 text-xs text-slate-500">
+              <div className="hidden md:flex items-center gap-3 text-xs" style={{ color: "var(--color-ink-muted)" }}>
                 <span>{stats.emails} emails</span>
-                <span className="text-emerald-600">{stats.sent} sent</span>
-                <span className="text-blue-600">{stats.approved_pending_send} queued</span>
+                <span style={{ color: "var(--color-success)" }}>{stats.sent} sent</span>
+                {stats.approved_pending_send > 0 && (
+                  <span style={{ color: "var(--color-accent)" }}>{stats.approved_pending_send} queued</span>
+                )}
                 {stats.sending > 0 && (
-                  <span className="text-amber-600">{stats.sending} sending</span>
+                  <span style={{ color: "var(--color-warning)" }}>{stats.sending} sending</span>
                 )}
                 {stats.failed > 0 && (
-                  <span className="text-rose-600">{stats.failed} failed</span>
+                  <span style={{ color: "var(--color-danger)" }}>{stats.failed} failed</span>
                 )}
                 {stats.dead > 0 && (
-                  <span className="text-rose-700">{stats.dead} dead</span>
+                  <span style={{ color: "var(--color-danger)" }}>{stats.dead} dead</span>
                 )}
               </div>
             )}
-            <Link to="/" className="btn-secondary">
-              ← Home
+            <Link to="/" className="btn-secondary text-xs" aria-label="Back to homepage">
+              Home
             </Link>
             <button
               onClick={handleRefresh}
-              className="btn-primary"
+              className="btn-primary text-xs"
               disabled={refreshing}
             >
-              {refreshing ? "Refreshing…" : "↻ Refresh inbox"}
+              {refreshing ? "Refreshing…" : "Refresh"}
             </button>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-6 py-6">
-        <div className="mb-4">
-          <HealthBar />
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
+        <HealthBar />
+
+        {/* Inline refresh error (replaces alert()) */}
+        {refreshError && (
+          <div className="alert-inline alert-error mb-3" role="alert">
+            <span aria-hidden="true">!</span>
+            <span>Refresh failed: {refreshError}</span>
+            <button
+              onClick={() => setRefreshError(null)}
+              className="ml-auto text-xs underline"
+              style={{ background: "transparent", border: "none", cursor: "pointer" }}
+            >
+              dismiss
+            </button>
+          </div>
+        )}
+
+        {/* Category filter chips */}
+        <div className="flex items-center gap-1.5 mb-3 overflow-x-auto pb-1">
+          {Object.keys(CATEGORY_LABELS).map((key) => (
+            <button
+              key={key}
+              onClick={() => setFilter(key)}
+              className="text-xs px-3 py-1 rounded-full whitespace-nowrap transition-colors font-medium"
+              style={{
+                background: filter === key ? "var(--color-accent)" : "var(--color-surface)",
+                color: filter === key ? "var(--color-accent-contrast)" : "var(--color-ink-muted)",
+                border: `1px solid ${filter === key ? "var(--color-accent)" : "var(--color-border)"}`,
+              }}
+            >
+              {CATEGORY_LABELS[key]}
+            </button>
+          ))}
         </div>
 
-        <div className="grid grid-cols-12 gap-6">
-          <div className="col-span-12 lg:col-span-5">
-            <div className="flex items-center gap-2 mb-3 overflow-x-auto pb-1">
-              {Object.keys(CATEGORY_LABELS).map((key) => (
-                <button
-                  key={key}
-                  onClick={() => setFilter(key)}
-                  className={`text-xs px-3 py-1 rounded-full transition-colors whitespace-nowrap ${
-                    filter === key
-                      ? "bg-brand-600 text-white"
-                      : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
-                  }`}
-                >
-                  {CATEGORY_LABELS[key]}
-                </button>
-              ))}
-            </div>
+        {/* Desktop layout: 2-pane (inbox | email+draft) + outbox below */}
+        {/* Mobile layout: list takes full screen; selecting an email pushes list off */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Inbox pane — hidden on mobile when an email is selected (full-screen email view) */}
+          <div className={selected ? "hidden lg:block" : "block"}>
             <InboxList
               emails={emails}
               selectedId={selected?.id || null}
               onSelect={handleSelect}
             />
+            {/* Mobile: outbox appears below list */}
+            <div className="lg:hidden mt-4">
+              <Outbox
+                refreshKey={refreshKey}
+                isOnline={isOnline}
+                isSending={isSending}
+              />
+            </div>
           </div>
 
-          <div className="col-span-12 lg:col-span-5">
+          {/* Email + draft pane — full screen on mobile when selected */}
+          <div className={selected ? "block" : "hidden lg:block"}>
             <EmailCard email={selected} onDraftUpdated={handleDraftUpdated} />
           </div>
+        </div>
 
-          <div className="col-span-12 lg:col-span-2">
-            <SendQueue refreshKey={refreshKey} />
-          </div>
+        {/* Desktop: outbox as a fixed column on the right */}
+        <div className="hidden lg:block fixed right-4 top-32 w-72 max-h-[calc(100vh-9rem)] overflow-y-auto z-10">
+          <Outbox
+            refreshKey={refreshKey}
+            isOnline={isOnline}
+            isSending={isSending}
+          />
         </div>
       </main>
 
-      <footer className="border-t border-slate-200 mt-12">
-        <div className="max-w-7xl mx-auto px-6 py-4 text-xs text-slate-500 flex items-center justify-between">
-          <span>
-            Built for Arpit · Hacktoberfest 2026 Weekend Challenge · Theme: Build for a Friend
+      {/* Footer — minimal, no hackathon text */}
+      <footer className="border-t mt-12" style={{ borderColor: "var(--color-border-soft)" }}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between text-xs">
+          <span style={{ color: "var(--color-ink-muted)" }}>
+            Powered by <span className="font-medium" style={{ color: "var(--color-ink)" }}>Gemma 3 1B</span> via Ollama
           </span>
-          <span>
-            Powered by <span className="font-medium text-slate-700">Gemma 3 1B</span> via Ollama ·
-            100% local-first
+          <span style={{ color: "var(--color-ink-faint)" }}>
+            Your inbox never leaves this machine.
           </span>
         </div>
       </footer>

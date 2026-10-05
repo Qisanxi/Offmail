@@ -23,23 +23,23 @@ export function HomePage() {
 
       <section className="hero">
         <div className="hero-inner">
-          <div className="badge">Built for Hacktoberfest 2026 — Weekend Challenge</div>
+          <div className="badge">Local-first · open-source AI · Hacktoberfest 2026</div>
           <h1>
             Your inbox,<br />
             <span className="grad">your laptop,</span><br />
             your AI.
           </h1>
           <p className="lede">
-            Offmail reads your Gmail locally, detects LinkedIn "connection accepted" emails,
+            Offmail reads your Gmail locally, detects LinkedIn &ldquo;connection accepted&rdquo; emails,
             drafts warm replies with <strong>Gemma 3 1B</strong> running on your own machine,
             and you hit send. No central server. No cloud LLM. Just you.
           </p>
           <p className="attribution">
-            Built for <strong>Arpit</strong> — a job seeker who sends 20+ LinkedIn connection
-            requests a week and never managed to reply when recruiters accepted.
+            An offline outbox for job seekers, freelancers, and anyone who wants to reply
+            fast without handing their inbox to a third party.
           </p>
           <div className="cta-row">
-            <Link to="/app" className="btn btn-primary">Open the app →</Link>
+            <Link to="/app" className="btn btn-primary">Open the app &rarr;</Link>
             <a
               href="https://github.com/Qisanxi/Offmail"
               target="_blank"
@@ -209,24 +209,24 @@ export function HomePage() {
 
       <section className="section section-cta">
         <div className="section-inner">
-          <h2>Built for Arpit. Open for everyone.</h2>
+          <h2>Open for everyone.</h2>
           <p>
-            Arpit sends 20+ connection requests a week. When recruiters accept, he means to
-            reply — but the friction kills the moment. Offmail removes the friction, and keeps
-            his inbox on his laptop where it belongs.
+            Offmail keeps your inbox on your laptop where it belongs &mdash; no third-party
+            servers, no monthly bills, no API keys to manage. Fork it, swap models, extend it
+            for your own workflow.
           </p>
           <p className="section-lede">
-            Fork it. Extend it. Swap models. Add Twitter follow-backs. Build for your own friend.
+            Built with FastAPI, React, and Gemma 3 1B via Ollama &mdash; all open source, all local.
           </p>
           <div className="cta-row">
-            <Link to="/app" className="btn btn-primary">Open the app →</Link>
+            <Link to="/app" className="btn btn-primary">Open the app &rarr;</Link>
             <a
               href="https://github.com/Qisanxi/Offmail"
               target="_blank"
               rel="noopener noreferrer"
               className="btn btn-secondary"
             >
-              ★ on GitHub
+              Star on GitHub
             </a>
           </div>
         </div>
@@ -235,10 +235,10 @@ export function HomePage() {
       <footer>
         <div className="footer-inner">
           <div>
-            <strong>Offmail</strong> — local-first email triage for job seekers.
+            <strong>Offmail</strong> &mdash; local-first email triage.
           </div>
           <div>
-            Built for <strong>Arpit</strong> · Hacktoberfest 2026 Weekend Challenge · MIT License
+            MIT License &middot; Powered by Gemma 3 1B via Ollama
           </div>
         </div>
       </footer>
