@@ -113,8 +113,7 @@ export const api = {
       {
         method: "POST",
         body: JSON.stringify({ variant, existing_body: existingBody }),
-      },
-      { requireAuth: true }
+      }
     ),
 
   approveDraft: (draftId, body) =>
