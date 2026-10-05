@@ -11,7 +11,15 @@
 
 Submitted for the **Hacktoberfest 2026 Weekend DEV Challenge** — theme: *Build for a Friend*.
 
-## Why this exists
+---
+# 🎥 Demo Video
+
+> **Video Link** : (https://youtu.be/xfp9BkdUpX0?si=6PghaHGxsBLSOUQ0)
+
+
+---
+
+## Why Offmail 
 
 Closed inbox-AI tools (Superhuman, Shortwave, etc.) read your emails on their servers. That means:
 
