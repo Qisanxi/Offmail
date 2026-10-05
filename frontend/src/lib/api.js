@@ -58,26 +58,8 @@ const BASE = "/api";
  * @property {number} dead
  */
 
-// Per-install auth token — fetched once from /api/token, cached, injected
-// into all mutating requests via X-Offmail-Token header.
-let _installToken = null;
-let _tokenPromise = null;
-
-async function _getToken() {
-  if (_installToken) return _installToken;
-  if (_tokenPromise) return _tokenPromise;
-  _tokenPromise = fetch(`${BASE}/token`)
-    .then((r) => (r.ok ? r.json() : Promise.reject(new Error("token fetch failed"))))
-    .then((data) => {
-      _installToken = data.token;
-      return _installToken;
-    })
-    .catch((e) => {
-      _tokenPromise = null;
-      throw e;
-    });
-  return _tokenPromise;
-}
+// Auth: the Vite dev proxy adds the X-Offmail-Token header to every /api
+// request (see vite.config.js), so the token never reaches browser JavaScript.
 
 function _normalizeError(status, body) {
   // FastAPI 422 returns detail as an array of validation errors
@@ -88,15 +70,8 @@ function _normalizeError(status, body) {
   return `Request failed (HTTP ${status})`;
 }
 
-async function fetchJSON(url, init, { requireAuth = false } = {}) {
+async function fetchJSON(url, init) {
   const headers = { "Content-Type": "application/json", ...(init?.headers || {}) };
-  if (requireAuth) {
-    try {
-      headers["X-Offmail-Token"] = await _getToken();
-    } catch {
-      // Even read endpoints work without token, but mutating ones will 401
-    }
-  }
   const resp = await fetch(url, { ...init, headers });
   if (!resp.ok) {
     let body = null;
@@ -115,7 +90,6 @@ async function fetchJSON(url, init, { requireAuth = false } = {}) {
 export const api = {
   health: () => fetchJSON(`${BASE}/health`),
 
-  // Read-only — no auth needed
   listEmails: (category, signal) =>
     fetchJSON(`${BASE}/emails${category ? `?category=${category}` : ""}`, { signal }),
 
@@ -124,15 +98,13 @@ export const api = {
 
   stats: () => fetchJSON(`${BASE}/stats`),
 
-  // Mutating — require token
   refreshInbox: () =>
-    fetchJSON(`${BASE}/inbox/refresh`, { method: "POST" }, { requireAuth: true }),
+    fetchJSON(`${BASE}/inbox/refresh`, { method: "POST" }),
 
   generateDraft: (emailId) =>
     fetchJSON(
       `${BASE}/emails/${emailId}/draft`,
-      { method: "POST" },
-      { requireAuth: true }
+      { method: "POST" }
     ),
 
   regenerateDraft: (emailId, variant, existingBody) =>
@@ -141,27 +113,24 @@ export const api = {
       {
         method: "POST",
         body: JSON.stringify({ variant, existing_body: existingBody }),
-      },
-      { requireAuth: true }
+      }
     ),
 
   approveDraft: (draftId, body) =>
     fetchJSON(
       `${BASE}/drafts/${draftId}/approve`,
-      { method: "POST", body: JSON.stringify({ body }) },
-      { requireAuth: true }
+      { method: "POST", body: JSON.stringify({ body }) }
     ),
 
   rejectDraft: (draftId) =>
     fetchJSON(
       `${BASE}/drafts/${draftId}/reject`,
-      { method: "POST" },
-      { requireAuth: true }
+      { method: "POST" }
     ),
 
   flushQueue: () =>
-    fetchJSON(`${BASE}/queue/flush`, { method: "POST" }, { requireAuth: true }),
+    fetchJSON(`${BASE}/queue/flush`, { method: "POST" }),
 
   retryFailed: () =>
-    fetchJSON(`${BASE}/queue/retry-failed`, { method: "POST" }, { requireAuth: true }),
+    fetchJSON(`${BASE}/queue/retry-failed`, { method: "POST" }),
 };
