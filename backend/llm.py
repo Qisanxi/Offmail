@@ -182,3 +182,122 @@ async def check_ollama_health() -> dict:
             "available_models": [],
             "needs_pull": None,
         }
+
+
+# ============================================================
+# Regeneration — produce a revised draft from an existing one
+# ============================================================
+
+REGEN_SYSTEM_PROMPT = """You are Offmail, helping revise a draft reply.
+
+The user wants a different version of an existing draft. Rewrite it according
+to the requested variant, preserving the same recipient and the same core
+intent. Output ONLY the revised reply body — no preamble, no signature, no
+quotation of the original.
+
+Variant requested: {variant}
+Variant rules:
+- shorter: cut word count roughly in half while keeping a clear next-step
+- warmer: more personal, conversational, less corporate
+- more_formal: professional, removed contractions, last-name address
+- more_casual: relaxed but still polite, contractions OK, first-name only
+- default: same tone as a fresh draft
+
+Word budget: {max_words} words.
+"""
+
+
+REGEN_TEMPLATE = """Rewrite this draft reply.
+
+Original draft:
+---
+{existing_body}
+---
+
+Original context (for reference only — do not quote back):
+- Sender name: {name}
+- Subject: {subject}
+
+Apply the variant. Output only the revised reply body.
+"""
+
+
+VARIANT_MAP = {
+    "shorter": "shorter",
+    "warmer": "warmer",
+    "more_formal": "more_formal",
+    "more_casual": "more_casual",
+}
+
+
+async def regenerate_draft(
+    variant: str,
+    existing_body: str,
+    contact_name: Optional[str],
+    subject: str,
+) -> str:
+    """Regenerate an existing draft with a different variant.
+
+    variant: one of "shorter", "warmer", "more_formal", "more_casual"
+    """
+    if not VARIANT_MAP.get(variant):
+        raise LLMError(
+            f"Invalid variant '{variant}'. Allowed: {', '.join(VARIANT_MAP.keys())}"
+        )
+
+    if not existing_body or len(existing_body) < 5:
+        raise LLMError("Existing draft is empty — generate a fresh draft first.")
+
+    prompt = REGEN_TEMPLATE.format(
+        existing_body=existing_body[:2000],
+        name=contact_name or "the recruiter",
+        subject=subject or "(no subject)",
+    )
+    system = REGEN_SYSTEM_PROMPT.format(
+        variant=variant,
+        max_words=settings.draft_max_words,
+    )
+
+    payload = {
+        "model": settings.ollama_model,
+        "prompt": prompt,
+        "system": system,
+        "stream": False,
+        "options": {
+            "temperature": 0.7,
+            "num_predict": 200,
+            "top_p": 0.9,
+            "keep_alive": "5m",
+        },
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(120.0, connect=10.0)) as client:
+            resp = await client.post(
+                f"{settings.ollama_url}/api/generate",
+                json=payload,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+    except httpx.ConnectError:
+        raise LLMError(
+            f"Cannot reach Ollama at {settings.ollama_url}. "
+            "Is `ollama serve` running?"
+        )
+    except httpx.ReadTimeout:
+        raise LLMError("Ollama took too long (120s timeout). Try again.")
+    except httpx.HTTPStatusError as e:
+        if e.response.status_code == 404:
+            raise LLMError(
+                f"Model '{settings.ollama_model}' not found. "
+                f"Run: ollama pull {settings.ollama_model}"
+            )
+        raise LLMError(f"Ollama returned HTTP {e.response.status_code}")
+    except (httpx.HTTPError, ValueError) as e:
+        raise LLMError(f"Ollama call failed: {e}")
+
+    text = (data.get("response") or "").strip()
+    if not text or len(text) < 10:
+        raise LLMError("Model returned an empty response. Try again.")
+
+    return _trim_to_last_sentence(text)

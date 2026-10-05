@@ -27,7 +27,7 @@ from .classifier import classify, extract_contact_name
 from .config import settings
 from .db import get_db, init_db
 from .imap_client import fetch_recent_social_emails
-from .llm import LLMError, check_ollama_health, generate_draft
+from .llm import LLMError, check_ollama_health, generate_draft, regenerate_draft
 from .models import (
     MAX_SEND_ATTEMPTS,
     Contact,
@@ -102,6 +102,9 @@ class EmailOut(BaseModel):
     category: str
     received_at: datetime
     contact_name: Optional[str] = None
+    contact_headline: Optional[str] = None  # e.g. "Recruiter at Stripe" — for the inbox row
+    destination_label: Optional[str] = None  # e.g. "Sends as a LinkedIn message" / "Copy and paste into LinkedIn"
+    safe_to_auto_send: bool = True  # False when reply_to is missing or from an untrusted domain
     draft_id: Optional[str] = None
     draft_body: Optional[str] = None
     draft_status: Optional[str] = None
@@ -123,6 +126,11 @@ class DraftApproveRequest(BaseModel):
     body: Optional[str] = Field(default=None, min_length=1, max_length=8000)
 
 
+class RegenerateRequest(BaseModel):
+    variant: str = Field(description="One of: shorter, warmer, more_formal, more_casual")
+    existing_body: Optional[str] = Field(default=None, max_length=8000)
+
+
 class HealthResponse(BaseModel):
     gmail_configured: bool
     ollama: dict
@@ -141,13 +149,54 @@ def _latest_draft(email: Email) -> Optional[Draft]:
     return email.drafts[0]
 
 
+def _domain_of(email_address: str) -> str:
+    """Return the lowercase domain of an email address, or '' if malformed."""
+    if not email_address or "@" not in email_address:
+        return ""
+    return email_address.split("@", 1)[1].lower().strip()
+
+
+def _is_linkedin_sender(from_address: str) -> bool:
+    domain = _domain_of(from_address)
+    return domain == "linkedin.com" or domain.endswith(".linkedin.com")
+
+
+def _destination_info(email: Email) -> tuple[str, bool]:
+    """Compute destination_label + safe_to_auto_send for an email.
+
+    Returns:
+      (label, safe)
+      - label: human-readable description of where the reply goes
+      - safe: True if the reply-to address is on a trusted domain (linkedin.com),
+              False if reply-to is missing or from an untrusted domain (copy required)
+    """
+    reply_to = email.reply_to
+    if not reply_to:
+        # No reply-to — we'd send to the original From address. For LinkedIn
+        # acceptance emails, that's invitations@linkedin.com (a black hole).
+        # Tell the user they need to copy-paste into LinkedIn manually.
+        if _is_linkedin_sender(email.from_address):
+            return ("Copy and paste into LinkedIn", False)
+        return (f"Reply to {email.from_address}", True)
+
+    rt_domain = _domain_of(reply_to)
+    if rt_domain == "linkedin.com" or rt_domain.endswith(".linkedin.com"):
+        return ("Sends as a LinkedIn message", True)
+    # Reply-to on an untrusted domain — could be a spoofing attempt.
+    # Show a warning; user must explicitly copy.
+    return (f"Reply via {rt_domain} — verify before sending", False)
+
+
 def _email_to_out(email: Email) -> EmailOut:
     """Convert an Email ORM object to an EmailOut response model."""
     draft = _latest_draft(email)
-    # Prefer the per-email extracted name (LinkedIn case), fall back to contact.name
-    contact_name = email.contact_name_extracted or (
-        email.contact.name if email.contact else None
-    ) or email.from_name
+    contact_name = (
+        email.contact_name_extracted
+        or (email.contact.name if email.contact else None)
+        or email.from_name
+    )
+    contact_headline = email.contact.headline if email.contact else None
+    destination_label, safe_to_send = _destination_info(email)
     return EmailOut(
         id=email.id,
         message_id=email.message_id,
@@ -159,6 +208,9 @@ def _email_to_out(email: Email) -> EmailOut:
         category=email.category.value if email.category else "unknown",
         received_at=email.received_at or datetime.now(timezone.utc),
         contact_name=contact_name,
+        contact_headline=contact_headline,
+        destination_label=destination_label,
+        safe_to_auto_send=safe_to_send,
         draft_id=draft.id if draft else None,
         draft_body=draft.body if draft else None,
         draft_status=draft.status.value if draft else None,
@@ -446,6 +498,67 @@ def reject_draft(
                 f"Cannot reject draft in status '{draft.status.value}'.",
             )
         draft.status = DraftStatus.REJECTED
+        db.commit()
+        db.refresh(draft)
+        return _draft_to_out(draft)
+
+
+@app.post("/api/emails/{email_id}/regenerate", response_model=DraftOut)
+async def regenerate_email_draft(
+    email_id: str,
+    req: RegenerateRequest,
+    _=Depends(require_token),
+) -> DraftOut:
+    """Regenerate a draft with a different variant (shorter, warmer, etc.).
+
+    Creates a NEW draft row for the email (preserves history of variants).
+    The new draft is in PENDING status — user reviews + approves as usual.
+    """
+    # Load email fields without holding session across LLM call
+    with get_db() as db:
+        email = db.scalar(
+            select(Email)
+            .options(selectinload(Email.drafts), selectinload(Email.contact))
+            .where(Email.id == email_id)
+        )
+        if not email:
+            raise HTTPException(404, "Email not found")
+
+        # Use existing body if provided, else latest draft's body
+        existing_body = req.existing_body
+        if not existing_body:
+            latest = _latest_draft(email)
+            existing_body = latest.body if latest else ""
+        if not existing_body:
+            raise HTTPException(400, "No existing draft to regenerate from. Generate a draft first.")
+
+        contact_name = (
+            email.contact_name_extracted
+            or (email.contact.name if email.contact else None)
+            or email.from_name
+        )
+        subject = email.subject or ""
+        email_id_str = email.id
+
+    # LLM call — outside DB session
+    try:
+        new_body = await regenerate_draft(
+            variant=req.variant,
+            existing_body=existing_body,
+            contact_name=contact_name,
+            subject=subject,
+        )
+    except LLMError as e:
+        raise HTTPException(502, str(e))
+
+    # Persist new draft
+    with get_db() as db:
+        draft = Draft(
+            email_id=email_id_str,
+            body=new_body,
+            status=DraftStatus.PENDING,
+        )
+        db.add(draft)
         db.commit()
         db.refresh(draft)
         return _draft_to_out(draft)
