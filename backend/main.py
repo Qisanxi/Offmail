@@ -18,7 +18,7 @@ from typing import Optional
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_serializer
 from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
 
@@ -36,7 +36,12 @@ from .models import (
     Email,
     EmailCategory,
 )
-from .send_queue import flush_queue_once, queue_loop, retry_failed_drafts
+from .send_queue import (
+    flush_queue_once,
+    queue_loop,
+    recover_interrupted_sends,
+    retry_failed_drafts,
+)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -50,9 +55,15 @@ async def lifespan(app: FastAPI):
     """Startup: init DB, start background queue."""
     init_db()
     logger.info("DB initialized at %s", settings.database_url)
-    token = get_install_token()
-    logger.info("Per-install auth token generated (path: .offmail_token)")
-    logger.info("Token: %s...", token[:8])
+    get_install_token()  # generate .offmail_token on first run
+    logger.info("Per-install auth token ready (see .offmail_token)")
+    interrupted = recover_interrupted_sends()
+    if interrupted:
+        logger.warning(
+            "%d draft(s) were mid-send when the app stopped; marked DEAD. "
+            "Check your Gmail Sent folder before retrying.",
+            interrupted,
+        )
     queue_task = asyncio.create_task(queue_loop())
     logger.info("Background queue task started")
     try:
@@ -75,7 +86,7 @@ app = FastAPI(
 # TrustedHostMiddleware — rejects requests with foreign Host headers
 app.add_middleware(
     TrustedHostMiddleware,
-    allowed_hosts=settings.trusted_hosts + ["*"] if not settings.trusted_hosts else settings.trusted_hosts,
+    allowed_hosts=settings.trusted_hosts or ["localhost", "127.0.0.1"],
 )
 
 app.add_middleware(
@@ -90,6 +101,19 @@ app.add_middleware(
 # ============================================================
 # Schemas
 # ============================================================
+
+def _utc_iso(dt: datetime | None) -> str | None:
+    """Serialize as ISO-8601 with an explicit UTC offset.
+
+    SQLite returns naive datetimes; without a 'Z'/offset the browser parses
+    them as *local* time and every timestamp is shifted by the UTC offset.
+    """
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+
 
 class EmailOut(BaseModel):
     id: str
@@ -109,6 +133,10 @@ class EmailOut(BaseModel):
     draft_body: Optional[str] = None
     draft_status: Optional[str] = None
 
+    @field_serializer("received_at")
+    def _ser_received(self, v: datetime) -> str | None:
+        return _utc_iso(v)
+
 
 class DraftOut(BaseModel):
     id: str
@@ -120,6 +148,10 @@ class DraftOut(BaseModel):
     created_at: datetime
     approved_at: Optional[datetime]
     sent_at: Optional[datetime]
+
+    @field_serializer("created_at", "approved_at", "sent_at")
+    def _ser_dt(self, v: datetime | None) -> str | None:
+        return _utc_iso(v)
 
 
 class DraftApproveRequest(BaseModel):
@@ -232,7 +264,7 @@ def _draft_to_out(draft: Draft) -> DraftOut:
 
 
 # ============================================================
-# Routes — read-only, no auth required (CSRF safe)
+# Routes — read-only (health is open; inbox data requires the token)
 # ============================================================
 
 @app.get("/api/health")
@@ -245,7 +277,7 @@ async def health() -> HealthResponse:
 
 
 @app.get("/api/emails", response_model=list[EmailOut])
-def list_emails(category: Optional[str] = None, limit: int = 50):
+def list_emails(category: Optional[str] = None, limit: int = 50, _=Depends(require_token)):
     """List stored emails, optionally filtered by category."""
     with get_db() as db:
         stmt = (
@@ -265,7 +297,7 @@ def list_emails(category: Optional[str] = None, limit: int = 50):
 
 
 @app.get("/api/drafts", response_model=list[DraftOut])
-def list_drafts(status: Optional[str] = None):
+def list_drafts(status: Optional[str] = None, _=Depends(require_token)):
     """List drafts, optionally filtered by status."""
     with get_db() as db:
         stmt = (
@@ -285,7 +317,7 @@ def list_drafts(status: Optional[str] = None):
 
 
 @app.get("/api/stats")
-def stats() -> dict:
+def stats(_=Depends(require_token)) -> dict:
     """Single grouped query — much faster than 5 separate COUNTs."""
     with get_db() as db:
         rows = db.execute(
@@ -372,17 +404,20 @@ async def refresh_inbox(_=Depends(require_token)) -> list[EmailOut]:
         # Single commit per refresh — much faster than per-row
         db.commit()
 
-        # Refresh + eager-load for serialization
-        for email_row in saved:
-            db.refresh(email_row)
-            db.scalar(
+        # Serialize INSIDE the session: relationships (drafts, contact) are
+        # lazy-loaded, and a detached instance can't load them.
+        out: list[EmailOut] = []
+        if saved:
+            rows = db.scalars(
                 select(Email)
                 .options(selectinload(Email.drafts), selectinload(Email.contact))
-                .where(Email.id == email_row.id)
+                .where(Email.id.in_([e.id for e in saved]))
+                .order_by(Email.received_at.desc())
             )
+            out = [_email_to_out(e) for e in rows]
 
-    logger.info("Refreshed inbox: %d new emails", len(saved))
-    return [_email_to_out(e) for e in saved]
+    logger.info("Refreshed inbox: %d new emails", len(out))
+    return out
 
 
 @app.post("/api/emails/{email_id}/draft", response_model=DraftOut)
@@ -571,20 +606,10 @@ async def manual_flush(_=Depends(require_token)) -> dict:
 
 
 @app.post("/api/queue/retry-failed")
-def retry_failed(_=Depends(require_token)) -> dict:
-    """Reset FAILED (non-DEAD) drafts back to APPROVED for immediate retry."""
-    count = retry_failed_drafts()
+def retry_failed(include_dead: bool = False, _=Depends(require_token)) -> dict:
+    """Reset FAILED drafts back to APPROVED. include_dead=true also revives DEAD ones."""
+    count = retry_failed_drafts(include_dead=include_dead)
     return {"reset_count": count, "max_attempts": MAX_SEND_ATTEMPTS}
-
-
-@app.get("/api/token")
-def show_token() -> dict:
-    """Convenience endpoint for local dev — returns the install token.
-
-    Only useful when running locally. Combined with TrustedHostMiddleware
-    this is safe (foreign hosts can't reach it).
-    """
-    return {"token": get_install_token()}
 
 
 @app.get("/")

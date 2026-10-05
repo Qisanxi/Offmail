@@ -3,15 +3,12 @@
 Key design choices:
 - Uses email.message.EmailMessage (modern API) with a strict policy that
   rejects header injection (CR/LF in headers).
-- The 'To' header is the original sender's address. The 'Reply-To' header
-  is set to the LinkedIn reply-to address (if present), so Gmail's SMTP
-  routes the message through LinkedIn's reply-to mechanism and it lands
-  as a LinkedIn DM.
+- For LinkedIn acceptance emails the caller passes LinkedIn's
+  reply+xxx@linkedin.com address as the recipient (validated in
+  send_queue.resolve_recipient); Reply-To is set to the same address.
+  For everything else the recipient is the original From address.
 - The signature is appended at SEND time (not generation time) so user
   edits to the draft can't drop or duplicate it.
-- Recipient address (for SMTP RCPT TO) is the LinkedIn reply-to if present,
-  otherwise the original sender — because that's where the message needs
-  to go to be routed to the recipient.
 """
 from __future__ import annotations
 

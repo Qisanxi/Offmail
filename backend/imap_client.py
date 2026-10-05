@@ -97,6 +97,16 @@ def _get_received_date(msg) -> datetime:
     return d.astimezone(timezone.utc)
 
 
+def build_search_criteria(window: datetime) -> str:
+    """Build ONE IMAP search string: date window + Gmail's Social category.
+
+    imap_tools turns `criteria` into text with str(), so it must be a single
+    string (or an AND/OR object). Passing a list sends the Python repr of the
+    list to the server, which Gmail rejects.
+    """
+    return f'{AND(date_gte=window.date())} X-GM-RAW "category:social"'
+
+
 def fetch_recent_social_emails() -> list[RawEmail]:
     """Fetch emails from Gmail's Social category via X-GM-RAW search.
 
@@ -115,17 +125,8 @@ def fetch_recent_social_emails() -> list[RawEmail]:
     ) as mailbox:
         mailbox.folder.set("INBOX")
 
-        # Gmail X-GM-RAW search for the Social category, within the date window.
-        # imap_tools supports raw search criteria via a string starting with '('
-        # but the cleanest path is to pass the X-GM-RAW literal.
-        # We combine with AND(date_gte=...) for the window.
-        criteria = AND(date_gte=window.date())
-        # imap_tools lets us inject raw criteria via the `header` arg or by
-        # passing a raw string. We use Gmail's X-GM-RAW extension explicitly:
-        gm_raw = 'X-GM-RAW "category:social"'
-
         for msg in mailbox.fetch(
-            criteria=[criteria, gm_raw],
+            criteria=build_search_criteria(window),
             limit=50,
             reverse=True,
             mark_seen=False,
