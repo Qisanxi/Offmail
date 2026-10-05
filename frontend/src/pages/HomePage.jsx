@@ -1,247 +1,178 @@
 import { Link } from "react-router-dom";
 import "../styles/landing.css";
 
+const REPO = "https://github.com/Qisanxi/Offmail";
+
+// The app needs the local backend, so "Open the app" only makes sense when this
+// page is served from your own machine. On a hosted copy we point at the repo.
+const IS_LOCAL =
+  typeof window !== "undefined" && ["localhost", "127.0.0.1"].includes(window.location.hostname);
+
 export function HomePage() {
   return (
-    <>
-      <header className="nav">
-        <div className="nav-inner">
-          <Link to="/" className="brand">
-            <div className="brand-mark">OM</div>
-            <span>Offmail</span>
+    <div className="lp theme-dark">
+      <header className="lp-nav">
+        <div className="lp-wrap lp-nav-inner">
+          <Link to="/" className="lp-brand">
+            <span className="lp-mark" aria-hidden="true">OM</span>
+            Offmail
           </Link>
-          <nav>
-            <a href="#why">Why</a>
+          <nav className="lp-nav-links" aria-label="Main">
             <a href="#how">How it works</a>
-            <a href="#install">Install</a>
-            <a href="https://github.com/Qisanxi/Offmail" target="_blank" rel="noopener noreferrer">
-              GitHub
-            </a>
+            <a href="#run">Run it</a>
+            <a href={REPO} target="_blank" rel="noopener noreferrer">GitHub</a>
           </nav>
         </div>
       </header>
 
-      <section className="hero">
-        <div className="hero-inner">
-          <div className="badge">Local-first · open-source AI · Hacktoberfest 2026</div>
-          <h1>
-            Your inbox,<br />
-            <span className="grad">your laptop,</span><br />
-            your AI.
-          </h1>
-          <p className="lede">
-            Offmail reads your Gmail locally, detects LinkedIn &ldquo;connection accepted&rdquo; emails,
-            drafts warm replies with <strong>Gemma 3 1B</strong> running on your own machine,
-            and you hit send. No central server. No cloud LLM. Just you.
-          </p>
-          <p className="attribution">
-            An offline outbox for job seekers, freelancers, and anyone who wants to reply
-            fast without handing their inbox to a third party.
-          </p>
-          <div className="cta-row">
-            <Link to="/app" className="btn btn-primary">Open the app &rarr;</Link>
-            <a
-              href="https://github.com/Qisanxi/Offmail"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn btn-secondary"
-            >
-              View source on GitHub
-            </a>
-          </div>
-          <div className="hero-stats">
-            <div><strong>0</strong><span>cloud servers we control</span></div>
-            <div><strong>1B</strong><span>param open-weight model</span></div>
-            <div><strong>$0</strong><span>cost to run, forever</span></div>
-          </div>
-        </div>
-      </section>
-
-      <section id="why" className="section">
-        <div className="section-inner">
-          <h2>Why this exists</h2>
-          <p className="section-lede">
-            Closed inbox-AI tools (Superhuman, Shortwave) read your emails on their servers.
-            That means your recruiter conversations sit in someone else&apos;s database, you pay
-            $20-30/month forever, and you can&apos;t audit how your data is used.
-          </p>
-          <p className="section-lede">
-            Offmail flips that. The open pieces are what make the project work —
-            and they answer every question in the Hacktoberfest prompt.
-          </p>
-
-          <div className="grid">
-            <div className="card">
-              <div className="card-icon">🔋</div>
-              <h3>Runs offline</h3>
-              <p>
-                Drafting works with no internet. Ollama + Gemma 3 1B run entirely on your
-                laptop. Draft replies on a flight, queue them up, hit send when you land.
+      <main>
+        <section className="lp-hero">
+          <div className="lp-wrap lp-hero-grid">
+            <div>
+              <h1 className="lp-h1">Every new connection deserves a reply.</h1>
+              <p className="lp-lede">
+                Offmail finds the LinkedIn &ldquo;accepted your invitation&rdquo; emails in your Gmail,
+                drafts a short thank-you on your own laptop, and sends it when you approve.
+                It keeps working offline.
               </p>
+              <div className="lp-cta">
+                {IS_LOCAL ? (
+                  <Link to="/app" className="btn-primary lp-btn">Open the app</Link>
+                ) : (
+                  <a href={REPO} target="_blank" rel="noopener noreferrer" className="btn-primary lp-btn">
+                    Get it on GitHub
+                  </a>
+                )}
+                <a href="#run" className="btn-secondary lp-btn">Run it yourself</a>
+              </div>
             </div>
-            <div className="card">
-              <div className="card-icon">🔒</div>
-              <h3>Data stays on your machine</h3>
-              <p>
-                There is no Offmail server. Each user runs their own copy. Your Gmail
-                credentials, emails, drafts — all stay in <code>.env</code> and local SQLite,
-                never sent anywhere except your own Gmail IMAP/SMTP.
-              </p>
-            </div>
-            <div className="card">
-              <div className="card-icon">🔄</div>
-              <h3>Swap models freely</h3>
-              <p>
-                Any Ollama model works. Change <code>OLLAMA_MODEL</code> env var to
-                <code>phi3:mini</code>, <code>llama3.2:1b</code>, <code>mistral:7b</code> —
-                no code changes, no API key, no subscription.
-              </p>
-            </div>
-            <div className="card">
-              <div className="card-icon">💸</div>
-              <h3>Costs nothing</h3>
-              <p>
-                Ollama, Gemma 3 1B, SQLite, FastAPI, React — all free, all open source.
-                No API costs, no per-seat licenses, no monthly bills. Yours forever.
-              </p>
+            <div>
+              <AppPreview />
+              <p className="lp-sample">Sample data.</p>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section id="how" className="section section-alt">
-        <div className="section-inner">
-          <h2>How it works</h2>
-          <div className="arch">
-            <div className="arch-step">
-              <div className="step-num">1</div>
+        <section className="lp-section">
+          <div className="lp-wrap">
+            <div className="lp-trio">
               <div>
-                <h3>Poll Gmail Social category</h3>
-                <p>IMAP fetches via Gmail&apos;s X-GM-RAW search — where LinkedIn acceptance emails land.</p>
+                <h3>Drafts stay on your machine</h3>
+                <p>A small model, Gemma 3 1B, runs through Ollama here. No AI service sees your email.</p>
               </div>
-            </div>
-            <div className="arch-step">
-              <div className="step-num">2</div>
               <div>
-                <h3>Classify locally</h3>
-                <p>Sender-restricted regex classifier tags emails: <em>LinkedIn accepted</em>, <em>needs reply</em>, <em>FYI</em>.</p>
+                <h3>The outbox waits for you</h3>
+                <p>Approve replies on a plane. They go out from your own Gmail when you&rsquo;re back online.</p>
               </div>
-            </div>
-            <div className="arch-step">
-              <div className="step-num">3</div>
               <div>
-                <h3>Draft with Gemma</h3>
-                <p>Ollama + Gemma 3 1B draft a short, warm reply. ~10-20s on a 4GB RAM laptop. Local only.</p>
-              </div>
-            </div>
-            <div className="arch-step">
-              <div className="step-num">4</div>
-              <div>
-                <h3>You review &amp; approve</h3>
-                <p>Edit the draft, approve it, queue it. Never auto-sends without your click.</p>
-              </div>
-            </div>
-            <div className="arch-step">
-              <div className="step-num">5</div>
-              <div>
-                <h3>Background sender</h3>
-                <p>Queue flushes via your own Gmail SMTP every 60s. Atomic claim prevents double-send. Backoff retry on failure.</p>
-              </div>
-            </div>
-            <div className="arch-step">
-              <div className="step-num">6</div>
-              <div>
-                <h3>Lands as LinkedIn DM</h3>
-                <p>The reply routes through LinkedIn&apos;s <code>reply-to</code> email address → arrives as a LinkedIn message. No API, no scraping.</p>
+                <h3>You send every reply</h3>
+                <p>Nothing leaves without your approval, and you see where each reply goes first.</p>
               </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section id="install" className="section">
-        <div className="section-inner">
-          <h2>Install Offmail</h2>
-          <p className="section-lede">
-            5-minute setup on any laptop with 4GB+ RAM. No server, no SaaS — you run your own copy.
-          </p>
+        <section id="how" className="lp-section">
+          <div className="lp-wrap">
+            <h2 className="lp-h2">How it works</h2>
+            <div className="lp-steps">
+              <div className="lp-step">
+                <div>
+                  <h3>Refresh</h3>
+                  <p>Offmail reads your Gmail Social tab and picks out connection and reply-worthy emails.</p>
+                </div>
+              </div>
+              <div className="lp-step">
+                <div>
+                  <h3>Review</h3>
+                  <p>Edit the draft, or rewrite it shorter, warmer, more formal or more casual.</p>
+                </div>
+              </div>
+              <div className="lp-step">
+                <div>
+                  <h3>Approve</h3>
+                  <p>The reply joins the outbox and sends from your Gmail, through the reply address on the email.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
 
-          <div className="install-block">
-            <h3>1. Prerequisites</h3>
-            <ul>
-              <li>Python 3.10+</li>
-              <li>Node.js 22.12+ (Vite 8 requires Node 20.19+ or 22.12+)</li>
-              <li><a href="https://ollama.ai" target="_blank" rel="noopener noreferrer">Ollama</a> installed</li>
-              <li>A Gmail account with <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer">app password</a></li>
-            </ul>
+        <section id="run" className="lp-section">
+          <div className="lp-wrap">
+            <h2 className="lp-h2">Run it on your laptop</h2>
+            <pre className="lp-code"><code>{`git clone ${REPO}.git && cd Offmail
+cp .env.example .env     # add your Gmail address and app password
+ollama pull gemma3:1b
+make setup && make run`}</code></pre>
+            <p className="lp-note">
+              Needs Python 3.10+, Node 20.19+ or 22.12+, Ollama, and a Gmail{" "}
+              <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer">app password</a>.
+              Full steps are in the{" "}
+              <a href={`${REPO}#readme`} target="_blank" rel="noopener noreferrer">README</a>.
+            </p>
           </div>
+        </section>
+      </main>
 
-          <div className="install-block">
-            <h3>2. Clone &amp; configure</h3>
-            <pre><code>git clone https://github.com/Qisanxi/Offmail.git{"\n"}cd Offmail{"\n"}cp .env.example .env{"\n"}# Edit .env — add your Gmail address + 16-char app password</code></pre>
-          </div>
-
-          <div className="install-block">
-            <h3>3. Pull the model</h3>
-            <pre><code>ollama pull gemma3:1b</code></pre>
-            <p className="note">~800MB download. One-time. After this, the model runs fully offline.</p>
-          </div>
-
-          <div className="install-block">
-            <h3>4. Run</h3>
-            <pre><code>make setup    # installs Python + Node deps{"\n"}make run      # starts FastAPI + React + Ollama check</code></pre>
-            <p className="note">Open <a href="http://localhost:5173">http://localhost:5173</a> — you&apos;re on the homepage. Click <strong>Open the app</strong> to start triaging.</p>
-          </div>
-
-          <div className="install-block">
-            <h3>5. Try it</h3>
-            <ol>
-              <li>Navigate to <Link to="/app">/app</Link> — the triage interface loads</li>
-              <li>Click &quot;Refresh inbox&quot; — Gmail Social emails load</li>
-              <li>Pick a LinkedIn acceptance email</li>
-              <li>Click &quot;Generate draft&quot; — Gemma writes a reply (10-20s)</li>
-              <li>Edit if you like, then &quot;Approve &amp; queue&quot;</li>
-              <li>Background sender routes via Gmail SMTP → LinkedIn reply-to → lands as a DM</li>
-            </ol>
-          </div>
-        </div>
-      </section>
-
-      <section className="section section-cta">
-        <div className="section-inner">
-          <h2>Open for everyone.</h2>
-          <p>
-            Offmail keeps your inbox on your laptop where it belongs &mdash; no third-party
-            servers, no monthly bills, no API keys to manage. Fork it, swap models, extend it
-            for your own workflow.
-          </p>
-          <p className="section-lede">
-            Built with FastAPI, React, and Gemma 3 1B via Ollama &mdash; all open source, all local.
-          </p>
-          <div className="cta-row">
-            <Link to="/app" className="btn btn-primary">Open the app &rarr;</Link>
-            <a
-              href="https://github.com/Qisanxi/Offmail"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn btn-secondary"
-            >
-              Star on GitHub
-            </a>
-          </div>
-        </div>
-      </section>
-
-      <footer>
-        <div className="footer-inner">
-          <div>
-            <strong>Offmail</strong> &mdash; local-first email triage.
-          </div>
-          <div>
-            MIT License &middot; Powered by Gemma 3 1B via Ollama
-          </div>
+      <footer className="lp-footer">
+        <div className="lp-wrap lp-footer-inner">
+          <span>Offmail &middot; MIT license</span>
+          <a href={REPO} target="_blank" rel="noopener noreferrer">GitHub</a>
         </div>
       </footer>
-    </>
+    </div>
+  );
+}
+
+// A static picture of the real app, built from the same classes and tokens so it
+// can't drift from the product. Not interactive, hidden from assistive tech.
+function AppPreview() {
+  return (
+    <div
+      className="lp-preview"
+      role="img"
+      aria-label="Preview of Offmail: an inbox list, a drafted reply to a LinkedIn connection, and the outbox with one reply queued"
+    >
+      <div aria-hidden="true">
+        <div className="lp-preview-bar">
+          <span className="status-dot-ok" /> Gmail
+          <span className="status-dot-ok" style={{ marginLeft: 8 }} /> gemma3:1b
+        </div>
+        <div className="lp-preview-body">
+          <div className="lp-preview-rail">
+            <div className="lp-preview-row row-marker-linkedin" style={{ background: "var(--color-row-selected)" }}>
+              Priya Patel <small>Technical recruiter at Northwind</small>
+            </div>
+            <div className="lp-preview-row row-marker-linkedin">
+              Marcus Chen <small>Engineering manager at Lumen</small>
+            </div>
+            <div className="lp-preview-row row-marker-reply">
+              Ana Silva <small>Question for you</small>
+            </div>
+            <div className="lp-preview-dock">
+              <div className="airmail-strip airmail-strip-live" />
+              <p><strong>Outbox</strong> 1 queued</p>
+            </div>
+          </div>
+          <div className="lp-preview-pane theme-light">
+            <h3 className="lp-preview-name">Priya Patel</h3>
+            <p className="lp-preview-sub">Technical recruiter at Northwind</p>
+            <p className="lp-preview-quote">You are now connected. Say hello and start a conversation.</p>
+            <p className="alert-inline alert-info" style={{ marginBottom: 12 }}>
+              <span>→</span><span><strong>Sends as a LinkedIn message</strong></span>
+            </p>
+            <div className="sheet lp-preview-draft">
+              Hi Priya, thanks for connecting! I&rsquo;d love to hear more about the ML roles your
+              team is hiring for. Happy to chat next week if that works.
+            </div>
+            <div className="lp-preview-actions">
+              <span className="btn-primary text-sm">Approve &amp; queue</span>
+              <span className="btn-ghost text-sm">Dismiss</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

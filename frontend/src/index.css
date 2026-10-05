@@ -49,56 +49,119 @@
   src: url("/fonts/newsreader-latin-500.woff2") format("woff2");
 }
 
-/* Theme tokens — ink blue on cool grey-green (NOT cream-terracotta) */
+/* Theme tokens.
+   Light = the reading pane (soft grey-green, no pure white).
+   .theme-dark re-points the same names for the shell (header, inbox rail, outbox). */
 @theme {
-  /* Surfaces */
-  --color-bg: #eef1ef;          /* cool grey-green background */
-  --color-bg-soft: #e3e7e4;
-  --color-surface: #ffffff;
-  --color-surface-elevated: #fbfcfb;
+  --color-bg: #dde6e0;
+  --color-bg-soft: #cfdad3;
+  --color-surface: #eef3ef;
+  --color-surface-elevated: #f3f7f4;
 
-  /* Ink */
-  --color-ink: #1a2332;         /* near-black slate-blue — primary text */
-  --color-ink-strong: #0d1420;
-  --color-ink-muted: #4a5764;   /* 7.1:1 contrast on white — passes AAA */
-  --color-ink-faint: #6b7785;   /* use sparingly, only for non-essential metadata */
+  --color-ink: #14202e;
+  --color-ink-strong: #0b1420;
+  --color-ink-muted: #3f4f60;
+  --color-ink-faint: #4e5f72;
 
-  /* Accent — ink blue (deeper than blue-600) */
   --color-accent: #1e3a5f;
   --color-accent-hover: #2c4a6b;
-  --color-accent-soft: #d8e1ea;
+  --color-accent-soft: #c3d1de;
   --color-accent-contrast: #ffffff;
 
-  /* Status — muted (not the usual saturated tailwind defaults) */
-  --color-success: #2d6b51;
-  --color-success-soft: #d9e8e0;
-  --color-warning: #946b2d;
-  --color-warning-soft: #f0e6d2;
+  --color-success: #25593f;
+  --color-success-soft: #cfe1d6;
+  --color-warning: #7d5a1f;
+  --color-warning-soft: #ecdcb8;
   --color-danger: #8b3a3a;
-  --color-danger-soft: #f0d8d8;
+  --color-danger-soft: #ecd0cc;
 
-  /* Markers per category — small left-edge colors */
   --color-marker-linkedin: #1e3a5f;
   --color-marker-reply: #946b2d;
   --color-marker-fyi: #6b7785;
 
-  /* Borders */
-  --color-border: #c8d0cc;
-  --color-border-soft: #dde2de;
+  --color-border: #aebbb3;
+  --color-border-soft: #c3cec7;
+  --color-row-hover: rgba(20, 32, 46, 0.05);
+  --color-row-selected: rgba(30, 58, 95, 0.12);
 
-  /* Fonts */
+  --shell-900: #0f1c30;
+  --shell-800: #15253d;
+  --shell-line: #2b4268;
+
   --font-sans: "Inter", system-ui, sans-serif;
   --font-serif: "Newsreader", "Iowan Old Style", "Apple Garamond", Georgia, serif;
   --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
 
-  /* Airmail stripe — used on outbox border while sending */
   --airmail-stripe: repeating-linear-gradient(
     -45deg,
-    #1e3a5f 0 12px,
-    #ffffff 12px 24px,
-    #b53b3b 24px 36px,
-    #ffffff 36px 48px
+    #e0524d 0 8px,
+    #e9eef5 8px 16px,
+    #4f7cc4 16px 24px,
+    #e9eef5 24px 32px
   );
+}
+
+.theme-dark {
+  --color-bg: #15253d;
+  --color-bg-soft: #1b3050;
+  --color-surface: #1b2f4d;
+  --color-surface-elevated: #21385a;
+
+  --color-ink: #e9eef5;
+  --color-ink-strong: #ffffff;
+  --color-ink-muted: #a9b8cb;
+  --color-ink-faint: #8fa1b7;
+
+  --color-accent: #8db4ee;
+  --color-accent-hover: #a9c6f3;
+  --color-accent-soft: rgba(141, 180, 238, 0.16);
+  --color-accent-contrast: #0f1c30;
+
+  --color-success: #7fcf9f;
+  --color-success-soft: rgba(127, 207, 159, 0.14);
+  --color-warning: #e3b866;
+  --color-warning-soft: rgba(227, 184, 102, 0.14);
+  --color-danger: #f08a84;
+  --color-danger-soft: rgba(240, 138, 132, 0.14);
+
+  --color-marker-linkedin: #8db4ee;
+  --color-marker-reply: #e3b866;
+  --color-marker-fyi: #8fa1b7;
+
+  --color-border: #2f4a73;
+  --color-border-soft: #25405f;
+  --color-row-hover: rgba(233, 238, 245, 0.05);
+  --color-row-selected: rgba(141, 180, 238, 0.14);
+
+  color: var(--color-ink);
+}
+
+
+/* Restores the light (reading pane) tokens inside a dark scope, e.g. the homepage preview */
+.theme-light {
+  --color-bg: #dde6e0;
+  --color-bg-soft: #cfdad3;
+  --color-surface: #eef3ef;
+  --color-surface-elevated: #f3f7f4;
+  --color-ink: #14202e;
+  --color-ink-strong: #0b1420;
+  --color-ink-muted: #3f4f60;
+  --color-ink-faint: #4e5f72;
+  --color-accent: #1e3a5f;
+  --color-accent-hover: #2c4a6b;
+  --color-accent-soft: #c3d1de;
+  --color-accent-contrast: #ffffff;
+  --color-success: #25593f;
+  --color-success-soft: #cfe1d6;
+  --color-warning: #7d5a1f;
+  --color-warning-soft: #ecdcb8;
+  --color-danger: #8b3a3a;
+  --color-danger-soft: #ecd0cc;
+  --color-border: #aebbb3;
+  --color-border-soft: #c3cec7;
+  --color-row-hover: rgba(20, 32, 46, 0.05);
+  --color-row-selected: rgba(30, 58, 95, 0.12);
+  color: var(--color-ink);
 }
 
 /* ============ Base ============ */
@@ -110,40 +173,26 @@ html, body {
   text-rendering: optimizeLegibility;
 }
 
-/* Email bodies + drafts in serif — they're prose, not code */
+/* Email bodies, drafts and names are prose, not code */
 .prose-text {
   font-family: var(--font-serif);
   font-weight: 400;
   line-height: 1.6;
 }
 
-/* ============ Focus styles — keyboard accessibility ============ */
 :focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
   border-radius: 4px;
 }
-
-/* Buttons get a stronger focus ring since they're interactive */
-button:focus-visible,
-a:focus-visible,
-[role="button"]:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 3px;
-  border-radius: 6px;
-}
-
-/* Inputs */
 textarea:focus-visible,
 input:focus-visible,
 select:focus-visible {
-  outline: 2px solid var(--color-accent);
   outline-offset: 0;
   border-color: var(--color-accent);
 }
 
-/* ============ Component utilities ============ */
-/* Note: previous version used `@inline-flex` which is invalid — Tailwind silently dropped it. */
+/* ============ Buttons ============ */
 @utility btn {
   display: inline-flex;
   align-items: center;
@@ -158,28 +207,26 @@ select:focus-visible {
   transition: background-color 150ms, border-color 150ms, color 150ms;
   border: 1px solid transparent;
 }
-.btn:disabled {
-  cursor: not-allowed;
-  opacity: 0.55;
-}
+.btn:disabled,
+.btn-primary:disabled,
+.btn-secondary:disabled,
+.btn-ghost:disabled { cursor: not-allowed; opacity: 0.5; }
 
 @utility btn-primary {
   @apply btn;
   background-color: var(--color-accent);
   color: var(--color-accent-contrast);
 }
-.btn-primary:hover:not(:disabled) {
-  background-color: var(--color-accent-hover);
-}
+.btn-primary:hover:not(:disabled) { background-color: var(--color-accent-hover); }
 
 @utility btn-secondary {
   @apply btn;
-  background-color: var(--color-surface);
+  background-color: transparent;
   border-color: var(--color-border);
   color: var(--color-ink);
 }
 .btn-secondary:hover:not(:disabled) {
-  background-color: var(--color-bg-soft);
+  background-color: var(--color-row-hover);
   border-color: var(--color-ink-muted);
 }
 
@@ -187,25 +234,14 @@ select:focus-visible {
   @apply btn;
   background-color: transparent;
   color: var(--color-ink-muted);
+  padding: 0.375rem 0.5rem;
 }
 .btn-ghost:hover:not(:disabled) {
-  background-color: rgba(0, 0, 0, 0.04);
+  background-color: var(--color-row-hover);
   color: var(--color-ink);
 }
 
-@utility btn-danger {
-  @apply btn;
-  background-color: var(--color-danger);
-  color: white;
-}
-
-@utility card {
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-border-soft);
-  border-radius: 8px;
-}
-
-/* Small status dot — used by HealthBar */
+/* ============ Small parts ============ */
 @utility status-dot {
   display: inline-block;
   width: 8px;
@@ -213,135 +249,145 @@ select:focus-visible {
   border-radius: 50%;
   flex-shrink: 0;
 }
-@utility status-dot-ok {
-  @apply status-dot;
-  background-color: var(--color-success);
-}
-@utility status-dot-warn {
-  @apply status-dot;
-  background-color: var(--color-warning);
-}
-@utility status-dot-error {
-  @apply status-dot;
-  background-color: var(--color-danger);
-}
+@utility status-dot-ok { @apply status-dot; background-color: var(--color-success); }
+@utility status-dot-warn { @apply status-dot; background-color: var(--color-warning); }
+@utility status-dot-error { @apply status-dot; background-color: var(--color-danger); }
 
-/* Inbox row marker — small left border per category */
 @utility row-marker {
   border-left: 3px solid var(--color-border-soft);
-  padding-left: 12px;
+  padding-left: 14px;
 }
-@utility row-marker-linkedin {
-  @apply row-marker;
-  border-left-color: var(--color-marker-linkedin);
-}
-@utility row-marker-reply {
-  @apply row-marker;
-  border-left-color: var(--color-marker-reply);
-}
-@utility row-marker-fyi {
-  @apply row-marker;
-  border-left-color: var(--color-marker-fyi);
-}
+@utility row-marker-linkedin { @apply row-marker; border-left-color: var(--color-marker-linkedin); }
+@utility row-marker-reply { @apply row-marker; border-left-color: var(--color-marker-reply); }
+@utility row-marker-fyi { @apply row-marker; border-left-color: var(--color-marker-fyi); }
 
-/* Outbox airmail edge — animated only while actively sending */
-@utility airmail-edge {
-  background: var(--airmail-stripe);
-  background-size: 200% 100%;
-}
-@utility airmail-edge-animating {
-  @apply airmail-edge;
-  animation: airmail-slide 1.2s linear infinite;
-}
-@keyframes airmail-slide {
-  from { background-position: 0 0; }
-  to { background-position: -48px 0; }
-}
-
-/* Sent items show their actual sent_at time */
 .time-quiet {
-  color: var(--color-ink-muted);
+  color: var(--color-ink-faint);
   font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
 }
 
-/* Inline alert — replaces alert() dialogs */
 .alert-inline {
   border-radius: 6px;
-  padding: 0.625rem 0.875rem;
+  padding: 0.5rem 0.75rem;
   font-size: 0.8125rem;
   display: flex;
   align-items: flex-start;
   gap: 0.5rem;
 }
-.alert-error {
-  background-color: var(--color-danger-soft);
-  color: var(--color-danger);
-  border: 1px solid var(--color-danger);
-}
-.alert-info {
-  background-color: var(--color-accent-soft);
-  color: var(--color-accent);
-  border: 1px solid var(--color-accent);
-}
+.alert-error { background-color: var(--color-danger-soft); color: var(--color-danger); }
+.alert-info { background-color: var(--color-accent-soft); color: var(--color-accent); }
+.alert-warn { background-color: var(--color-warning-soft); color: var(--color-warning); }
 
-/* Word counter chip in draft editor */
 .word-counter {
   font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
-  color: var(--color-ink-muted);
-  padding: 2px 8px;
-  border-radius: 999px;
-  background-color: var(--color-bg-soft);
-}
-.word-counter-over {
-  color: var(--color-danger);
-  background-color: var(--color-danger-soft);
-}
-
-/* Small text labels */
-.label {
-  font-size: 0.6875rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
   color: var(--color-ink-faint);
 }
+.word-counter-over { color: var(--color-danger); font-weight: 600; }
 
-/* ============ Badges (small inline chips) ============ */
+/* Soft pills — colour carries the meaning, no outlines */
 .badge {
   display: inline-flex;
   align-items: center;
   padding: 1px 8px;
-  border-radius: 4px;
+  border-radius: 999px;
   font-size: 0.6875rem;
-  font-weight: 500;
-  letter-spacing: 0.01em;
-  border: 1px solid transparent;
+  font-weight: 600;
   white-space: nowrap;
 }
-.badge-blue {
-  background-color: var(--color-accent-soft);
-  color: var(--color-accent);
-  border-color: var(--color-accent);
+.badge-blue { background-color: var(--color-accent-soft); color: var(--color-accent); }
+.badge-yellow { background-color: var(--color-warning-soft); color: var(--color-warning); }
+.badge-green { background-color: var(--color-success-soft); color: var(--color-success); }
+.badge-gray { background-color: var(--color-row-hover); color: var(--color-ink-muted); }
+.badge-red { background-color: var(--color-danger-soft); color: var(--color-danger); }
+
+/* ============ App shell: header + inbox rail + reading pane ============ */
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  background: var(--color-bg);
 }
-.badge-yellow {
-  background-color: var(--color-warning-soft);
-  color: var(--color-warning);
-  border-color: var(--color-warning);
+.app-header {
+  background: var(--shell-900);
+  border-bottom: 1px solid var(--shell-line);
+  flex-shrink: 0;
 }
-.badge-green {
-  background-color: var(--color-success-soft);
-  color: var(--color-success);
-  border-color: var(--color-success);
+.app-body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr;
 }
-.badge-gray {
-  background-color: var(--color-bg-soft);
+.app-rail {
+  background: var(--shell-800);
+  /* display comes from the Tailwind utilities on the element (flex / hidden lg:flex) */
+  flex-direction: column;
+  min-height: 0;
+}
+.rail-list { flex: 1; min-height: 0; overflow-y: auto; }
+.rail-dock {
+  border-top: 1px solid var(--shell-line);
+  background: var(--shell-900);
+  flex-shrink: 0;
+}
+.app-pane { min-height: 0; overflow-y: auto; background: var(--color-bg); }
+
+@media (min-width: 1024px) {
+  .app-body { grid-template-columns: 340px 1fr; }
+  .app-rail { border-right: 1px solid var(--shell-line); }
+}
+
+/* Filter tabs in the rail */
+.filter-tab {
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.5rem 0.625rem;
   color: var(--color-ink-muted);
-  border-color: var(--color-border);
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  cursor: pointer;
 }
-.badge-red {
-  background-color: var(--color-danger-soft);
-  color: var(--color-danger);
-  border-color: var(--color-danger);
+.filter-tab:hover { color: var(--color-ink); }
+.filter-tab[aria-selected="true"] {
+  color: var(--color-ink-strong);
+  border-bottom-color: var(--color-accent);
+}
+
+/* The sheet: the one "paper" element in the reading pane */
+.sheet {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-soft);
+  border-radius: 10px;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.5) inset, 0 8px 24px -16px rgba(11, 20, 32, 0.45);
+}
+
+kbd {
+  font-family: var(--font-mono);
+  font-size: 0.7em;
+  padding: 1px 5px;
+  border-radius: 4px;
+  border: 1px solid var(--color-border);
+}
+
+/* ============ Outbox airmail strip — animates only while sending ============ */
+.airmail-strip { position: relative; height: 3px; overflow: hidden; }
+.airmail-strip::before {
+  content: "";
+  position: absolute;
+  inset: 0 -46px 0 0;
+  background: var(--airmail-stripe);
+  opacity: 0.45;
+}
+.airmail-strip-live::before {
+  opacity: 1;
+  animation: airmail-slide 1s linear infinite;
+}
+@keyframes airmail-slide {
+  to { transform: translateX(-45.2548px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .airmail-strip-live::before { animation: none; }
 }

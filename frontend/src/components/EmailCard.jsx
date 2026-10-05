@@ -6,14 +6,15 @@ const WORD_LIMIT = 80;
 const REGEN_VARIANTS = [
   { key: "shorter", label: "Shorter" },
   { key: "warmer", label: "Warmer" },
-  { key: "more_formal", label: "More formal" },
-  { key: "more_casual", label: "More casual" },
+  { key: "more_formal", label: "Formal" },
+  { key: "more_casual", label: "Casual" },
 ];
 
 // Props:
 //   email: EmailOut | null
 //   onDraftUpdated: () => void
-export function EmailCard({ email, onDraftUpdated }) {
+//   onBack: () => void   (mobile: return to the list)
+export function EmailCard({ email, onDraftUpdated, onBack }) {
   const [draft, setDraft] = useState("");
   const [draftId, setDraftId] = useState(null);
   const [draftStatus, setDraftStatus] = useState(null);
@@ -42,10 +43,12 @@ export function EmailCard({ email, onDraftUpdated }) {
 
   if (!email) {
     return (
-      <div className="card p-8 text-center" style={{ color: "var(--color-ink-muted)" }}>
-        <p className="text-sm">Select an email to view details.</p>
-        <p className="text-xs mt-1" style={{ color: "var(--color-ink-faint)" }}>
-          Or press <kbd className="font-mono">j</kbd> / <kbd className="font-mono">k</kbd> to move between rows.
+      <div className="h-full flex flex-col items-center justify-center text-center p-8" style={{ color: "var(--color-ink-muted)" }}>
+        <p className="prose-text text-xl" style={{ color: "var(--color-ink)" }}>
+          No email selected
+        </p>
+        <p className="text-xs mt-2">
+          <kbd>j</kbd> and <kbd>k</kbd> move between emails
         </p>
       </div>
     );
@@ -131,102 +134,65 @@ export function EmailCard({ email, onDraftUpdated }) {
   const isRejected = draftStatus === "rejected";
   const isDead = draftStatus === "dead";
   const showGenerate = (!draft || isRejected) && !generating;
-  const canAutoSend = email.safe_to_auto_send;
+  // Older backends don't send the flag; only an explicit false blocks sending.
+  const canAutoSend = email.safe_to_auto_send !== false;
+  const busy = generating || sending || !!regenVariant;
+  const name = email.contact_name || email.from_name || email.from_address;
+  const sub = email.contact_headline || (email.category === "linkedin_accepted" ? "" : email.subject);
 
   return (
-    <div className="card p-5">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-3 mb-3">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 mb-1.5">
-            <DraftStatusBadge status={draftStatus} />
-            <span className="label" style={{ background: "transparent", padding: 0 }}>
-              {email.category === "linkedin_accepted"
-                ? "LinkedIn acceptance"
-                : email.category === "needs_reply"
-                ? "Needs your reply"
-                : email.category === "fyi"
-                ? "FYI"
-                : "Email"}
-            </span>
-          </div>
-          <h2 className="text-base font-semibold leading-snug" style={{ color: "var(--color-ink-strong)" }}>
-            {email.contact_name || email.from_name || email.from_address}
-          </h2>
-          {email.contact_headline && (
-            <p className="text-xs mt-0.5" style={{ color: "var(--color-ink-muted)" }}>
-              {email.contact_headline}
-            </p>
-          )}
-          {email.subject && (
-            <p className="text-xs mt-0.5 italic" style={{ color: "var(--color-ink-faint)" }}>
-              {email.subject}
-            </p>
-          )}
-        </div>
-        <div className="time-quiet shrink-0">
-          {new Date(email.received_at).toLocaleString(undefined, {
-            month: "short",
-            day: "numeric",
-            hour: "numeric",
-            minute: "2-digit",
-          })}
-        </div>
-      </div>
+    <article className="max-w-2xl mx-auto px-5 sm:px-8 py-6">
+      {onBack && (
+        <button onClick={onBack} className="btn-ghost text-xs -ml-2 mb-3 lg:hidden">
+          ← Inbox
+        </button>
+      )}
 
-      {/* Original email body */}
-      <div
-        className="rounded p-3 mb-4 prose-text"
-        style={{
-          background: "var(--color-bg-soft)",
-          color: "var(--color-ink)",
-          fontSize: "0.875rem",
-          maxHeight: "10rem",
-          overflowY: "auto",
-          whiteSpace: "pre-wrap",
-        }}
+      {/* Who it's from */}
+      <header className="flex items-start justify-between gap-4 mb-5">
+        <div className="min-w-0">
+          <h2 className="prose-text text-3xl leading-tight" style={{ color: "var(--color-ink-strong)", fontWeight: 500 }}>
+            {name}
+          </h2>
+          {sub && (
+            <p className="text-sm mt-1" style={{ color: "var(--color-ink-muted)" }}>
+              {sub}
+            </p>
+          )}
+        </div>
+        <div className="flex flex-col items-end gap-1.5 shrink-0 pt-1.5">
+          <DraftStatusBadge status={draftStatus} />
+          <time className="time-quiet" dateTime={email.received_at}>
+            {new Date(email.received_at).toLocaleString(undefined, {
+              month: "short",
+              day: "numeric",
+              hour: "numeric",
+              minute: "2-digit",
+            })}
+          </time>
+        </div>
+      </header>
+
+      {/* What they wrote */}
+      <blockquote
+        className="prose-text text-[0.9375rem] pl-4 mb-5 max-h-32 overflow-y-auto whitespace-pre-wrap"
+        style={{ borderLeft: "2px solid var(--color-border)", color: "var(--color-ink-muted)" }}
       >
         {email.body_snippet || "(empty body)"}
-      </div>
+      </blockquote>
 
-      {/* Destination preview — shown BEFORE approve, so user knows where it goes */}
-      <div
-        className="rounded p-2.5 mb-3 text-xs flex items-center gap-2"
-        style={{
-          background: canAutoSend ? "var(--color-accent-soft)" : "var(--color-warning-soft)",
-          color: canAutoSend ? "var(--color-accent)" : "var(--color-warning)",
-          border: `1px solid ${canAutoSend ? "var(--color-accent)" : "var(--color-warning)"}`,
-        }}
+      {/* Where the reply goes, shown before you approve */}
+      <p
+        className={`alert-inline ${canAutoSend ? "alert-info" : "alert-warn"} mb-4`}
+        style={{ alignItems: "center" }}
       >
-        <span aria-hidden="true" style={{ fontWeight: 700 }}>→</span>
+        <span aria-hidden="true">{canAutoSend ? "→" : "!"}</span>
         <span>
           <strong>{email.destination_label}</strong>
-          {!canAutoSend && (
-            <>
-              {" "}
-              &mdash; use the <em>Copy</em> button below and paste manually into LinkedIn.
-            </>
-          )}
+          {!canAutoSend && " — copy the draft and send it yourself."}
         </span>
-      </div>
+      </p>
 
-      {/* Draft header + Generate button */}
-      <div className="mb-2 flex items-center justify-between">
-        <h3 className="text-sm font-semibold" style={{ color: "var(--color-ink)" }}>
-          Draft reply
-        </h3>
-        {showGenerate && (
-          <button
-            onClick={handleGenerate}
-            className="btn-secondary text-xs"
-            disabled={isSent || isApproved || isDead}
-          >
-            {isRejected ? "Regenerate" : "Generate draft"}
-          </button>
-        )}
-      </div>
-
-      {/* Inline error */}
       {error && (
         <div className="alert-inline alert-error mb-3" role="alert">
           <span aria-hidden="true">!</span>
@@ -234,139 +200,112 @@ export function EmailCard({ email, onDraftUpdated }) {
         </div>
       )}
 
-      {/* Draft editor */}
+      {showGenerate && (
+        <button onClick={handleGenerate} className="btn-primary" disabled={isSent || isApproved || isDead}>
+          {isRejected ? "Write a new draft" : "Draft a reply"}
+        </button>
+      )}
+
+      {generating && (
+        <p className="text-sm animate-pulse" style={{ color: "var(--color-ink-muted)" }}>
+          Drafting… usually 10–20 seconds.
+        </p>
+      )}
+      {regenVariant && !generating && (
+        <p className="text-sm animate-pulse" style={{ color: "var(--color-ink-muted)" }}>
+          Rewriting ({regenVariant.replace("_", " ")})…
+        </p>
+      )}
+
+      {/* The draft */}
       {draft && !isRejected && (
         <>
-          <textarea
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            disabled={!editing || isSent || isApproved}
-            className="w-full p-3 border rounded prose-text"
-            style={{
-              borderColor: "var(--color-border)",
-              fontSize: "0.9375rem",
-              lineHeight: 1.6,
-              color: "var(--color-ink)",
-              minHeight: "8rem",
-              resize: "vertical",
-              background: editing ? "var(--color-surface)" : "var(--color-surface-elevated)",
-            }}
-            placeholder="Draft will appear here…"
-            aria-label="Draft reply — editable"
-          />
+          <div className="sheet p-1">
+            <textarea
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              disabled={!editing || isSent || isApproved}
+              className="w-full px-4 py-3 rounded-lg prose-text bg-transparent"
+              style={{
+                fontSize: "1.0625rem",
+                color: "var(--color-ink)",
+                minHeight: "9rem",
+                resize: "vertical",
+                border: "none",
+              }}
+              aria-label="Draft reply"
+            />
+          </div>
 
-          {/* Word counter */}
-          <div className="flex items-center justify-between mt-1.5 mb-2">
-            <div className="flex gap-1.5">
-              {!isSent && !isRejected && !isDead && draft && (
+          <div className="flex items-center justify-between gap-2 mt-2 mb-5">
+            <div className="flex flex-wrap items-center gap-0.5 -ml-2" role="group" aria-label="Edit or rewrite the draft">
+              {!isSent && !isDead && !isApproved && (
                 <>
-                  {!editing && !isApproved && (
-                    <button
-                      onClick={() => setEditing(true)}
-                      className="btn-ghost text-xs"
-                      disabled={generating || sending || !!regenVariant}
-                    >
+                  {!editing && (
+                    <button onClick={() => setEditing(true)} className="btn-ghost text-xs" disabled={busy}>
                       Edit
                     </button>
                   )}
-                  {/* Regenerate chips */}
-                  <div className="flex gap-1" role="group" aria-label="Regenerate draft">
-                    {REGEN_VARIANTS.map((v) => (
-                      <button
-                        key={v.key}
-                        onClick={() => handleRegenerate(v.key)}
-                        className="btn-ghost text-xs"
-                        disabled={generating || sending || !!regenVariant || isApproved}
-                        title={`Regenerate as ${v.label.toLowerCase()}`}
-                      >
-                        {regenVariant === v.key ? "…" : v.label}
-                      </button>
-                    ))}
-                  </div>
+                  {REGEN_VARIANTS.map((v) => (
+                    <button
+                      key={v.key}
+                      onClick={() => handleRegenerate(v.key)}
+                      className="btn-ghost text-xs"
+                      disabled={busy}
+                      title={`Rewrite: ${v.label.toLowerCase()}`}
+                    >
+                      {regenVariant === v.key ? "…" : v.label}
+                    </button>
+                  ))}
                 </>
               )}
             </div>
             <span className={`word-counter ${wordCount > WORD_LIMIT ? "word-counter-over" : ""}`}>
-              {wordCount} / {WORD_LIMIT} words
+              {wordCount}/{WORD_LIMIT}
             </span>
           </div>
 
-          {/* Action buttons */}
           <div className="flex flex-wrap items-center gap-2">
-            {!isSent && !isRejected && !isDead && (
+            {!isSent && !isDead && (
               <>
                 <button
                   onClick={handleApprove}
-                  className="btn-primary text-sm"
-                  disabled={generating || sending || (isApproved && !editing) || !!regenVariant}
+                  className="btn-primary"
+                  disabled={busy || (isApproved && !editing) || !canAutoSend}
+                  title={canAutoSend ? undefined : "This reply can't be sent automatically. Use Copy."}
                 >
-                  {sending ? "Queuing…" : isApproved ? "Re-approve" : "Approve &amp; queue"}
+                  {sending ? "Queuing…" : isApproved ? "Queued" : "Approve & queue"}
                 </button>
                 {!canAutoSend && (
-                  <button
-                    onClick={handleCopy}
-                    className="btn-secondary text-sm"
-                    disabled={generating || sending}
-                  >
+                  <button onClick={handleCopy} className="btn-secondary" disabled={busy}>
                     {copied ? "Copied" : "Copy draft"}
                   </button>
                 )}
-                <button
-                  onClick={handleReject}
-                  className="btn-ghost text-sm"
-                  disabled={generating || sending}
-                >
+                <button onClick={handleReject} className="btn-ghost" disabled={busy}>
                   Dismiss
                 </button>
               </>
             )}
             {isSent && (
-              <div className="text-sm flex items-center gap-2" style={{ color: "var(--color-success)" }}>
+              <p className="text-sm flex items-center gap-2" style={{ color: "var(--color-success)" }}>
                 <span className="status-dot-ok" aria-hidden="true" />
-                Sent {draftSentAt ? new Date(draftSentAt).toLocaleString() : ""}
-              </div>
-            )}
-            {isRejected && (
-              <div className="text-sm" style={{ color: "var(--color-ink-muted)" }}>
-                Dismissed &mdash; click Regenerate to try again.
-              </div>
+                Sent{draftSentAt ? ` ${new Date(draftSentAt).toLocaleString()}` : ""}
+              </p>
             )}
             {isDead && (
-              <div className="text-sm" style={{ color: "var(--color-danger)" }}>
-                Failed after multiple attempts. Click &ldquo;Retry&rdquo; in the outbox panel.
-              </div>
+              <p className="text-sm" style={{ color: "var(--color-danger)" }}>
+                Couldn&rsquo;t send after several tries. Use Retry in the outbox.
+              </p>
             )}
           </div>
-
-          {isApproved && !isSent && (
-            <div className="alert-inline alert-info mt-3 text-xs">
-              <span aria-hidden="true">●</span>
-              <span>
-                Queued for send. The outbox will deliver via your own Gmail SMTP within ~60s.
-                If you&rsquo;re offline, drafts auto-send when your connection returns.
-              </span>
-            </div>
-          )}
         </>
       )}
 
-      {/* Generating state */}
-      {generating && (
-        <div
-          className="rounded p-3 text-sm animate-pulse"
-          style={{ background: "var(--color-bg-soft)", color: "var(--color-ink-muted)" }}
-        >
-          Gemma 3 1B is drafting&hellip; (local inference, 10&ndash;20s on a 4GB laptop)
-        </div>
+      {isRejected && (
+        <p className="text-sm mt-3" style={{ color: "var(--color-ink-muted)" }}>
+          Dismissed.
+        </p>
       )}
-      {regenVariant && !generating && (
-        <div
-          className="rounded p-3 text-sm animate-pulse"
-          style={{ background: "var(--color-bg-soft)", color: "var(--color-ink-muted)" }}
-        >
-          Regenerating as {regenVariant.replace("_", " ")}&hellip;
-        </div>
-      )}
-    </div>
+    </article>
   );
 }
