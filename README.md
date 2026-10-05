@@ -2,7 +2,6 @@
 
 [![CI](https://github.com/Qisanxi/Offmail/actions/workflows/test.yml/badge.svg)](https://github.com/Qisanxi/Offmail/actions/workflows/test.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![React Router](https://img.shields.io/badge/react%20router-7-ca3838.svg)](https://reactrouter.com/)
 [![Model: Gemma 3 1B](https://img.shields.io/badge/LLM-Gemma%203%201B-orange)](https://ai.google.dev/gemma)
 [![Hacktoberfest 2026](https://img.shields.io/badge/Hacktoberfest-2026-purple)](https://hacktoberfest.com)
 [![Local-first](https://img.shields.io/badge/architecture-local--first-success)](#why-this-exists)
@@ -12,23 +11,6 @@
 
 Submitted for the **Hacktoberfest 2026 Weekend DEV Challenge** — theme: *Build for a Friend*.
 
----
-
-## Table of contents
-
-- [Why this exists](#why-this-exists)
-- [Architecture diagram](#architecture-diagram)
-- [User flow diagram](#user-flow-diagram)
-- [Quickstart](#quickstart)
-- [How it works](#how-it-works)
-- [Project structure](#project-structure)
-- [Hacktoberfest compliance](#hacktoberfest-compliance)
-- [Roadmap](#roadmap)
-- [Privacy & security](#privacy--security)
-- [Contributing](#contributing)
-- [License](#license)
-
----
 
 ## Why this exists
 
