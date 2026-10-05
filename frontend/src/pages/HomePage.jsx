@@ -176,3 +176,105 @@ function AppPreview() {
     </div>
   );
 }
+
+/* ============ Sub-components ============ */
+
+function ProductMockup() {
+  // A miniature, statically-rendered preview of the app interface.
+  // Shows: inbox list (left), email + draft (center), outbox with airmail edge (right).
+  return (
+    <div className="mockup-window">
+      <div className="mockup-titlebar">
+        <span className="dot dot-red" />
+        <span className="dot dot-yellow" />
+        <span className="dot dot-green" />
+        <span className="mockup-url">localhost:5173/app</span>
+      </div>
+      <div className="mockup-body">
+        {/* Inbox list */}
+        <div className="mockup-pane mockup-inbox">
+          <div className="mockup-pane-label">Inbox</div>
+          <div className="mockup-row mockup-row-selected">
+            <span className="mockup-marker mockup-marker-linkedin" />
+            <div>
+              <div className="mockup-row-name">Priya Patel</div>
+              <div className="mockup-row-sub">Recruiter at Stripe</div>
+            </div>
+            <span className="mockup-row-time">2h</span>
+          </div>
+          <div className="mockup-row">
+            <span className="mockup-marker mockup-marker-linkedin" />
+            <div>
+              <div className="mockup-row-name">Marcus Chen</div>
+              <div className="mockup-row-sub">Eng Manager at Linear</div>
+            </div>
+            <span className="mockup-row-time">5h</span>
+          </div>
+          <div className="mockup-row">
+            <span className="mockup-marker mockup-marker-reply" />
+            <div>
+              <div className="mockup-row-name">Sarah Lee</div>
+              <div className="mockup-row-sub">Re: interview prep</div>
+            </div>
+            <span className="mockup-row-time">1d</span>
+          </div>
+          <div className="mockup-row">
+            <span className="mockup-marker mockup-marker-fyi" />
+            <div>
+              <div className="mockup-row-name">LinkedIn digest</div>
+              <div className="mockup-row-sub">Weekly summary</div>
+            </div>
+            <span className="mockup-row-time">2d</span>
+          </div>
+        </div>
+
+        {/* Email + draft */}
+        <div className="mockup-pane mockup-email">
+          <div className="mockup-pane-label">Draft reply</div>
+          <div className="mockup-destination">
+            → Sends as a LinkedIn message
+          </div>
+          <div className="mockup-draft">
+            Hi Priya, thanks so much for connecting! Really enjoyed your post on
+            building inclusive eng teams — would love to chat about opportunities
+            at Stripe if anything fits my background.
+          </div>
+          <div className="mockup-draft-meta">
+            <span className="mockup-badge">23 / 80 words</span>
+            <span className="mockup-approve">Approve &amp; queue</span>
+          </div>
+        </div>
+
+        {/* Outbox — with animated airmail edge */}
+        <div className="mockup-pane mockup-outbox">
+          <div className="mockup-airmail-top" />
+          <div className="mockup-pane-label">Outbox</div>
+          <div className="mockup-outbox-status">2 queued · sending</div>
+          <div className="mockup-outbox-item">
+            <div className="mockup-outbox-badge mockup-outbox-sending">Sending</div>
+            <div className="mockup-outbox-body">
+              Hi Marcus, thanks for connecting&hellip;
+            </div>
+          </div>
+          <div className="mockup-outbox-item">
+            <div className="mockup-outbox-badge mockup-outbox-queued">Queued</div>
+            <div className="mockup-outbox-body">
+              Hi Priya, thanks so much&hellip;
+            </div>
+          </div>
+          <div className="mockup-airmail-bottom" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FlowStep({ num, title, body }) {
+  return (
+    <div className="flow-step">
+      <div className="flow-num">{num}</div>
+      <h3>{title}</h3>
+      <p>{body}</p>
+    </div>
+  );
+}

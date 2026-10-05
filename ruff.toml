@@ -12,6 +12,7 @@ ignore = [
     "B008",   # function call in default arg — FastAPI Depends() pattern
     "B904",   # raise from — we intentionally rewrite errors with friendly messages
     "UP007",  # X | Y in annotations — keep Optional/Union for clarity
+    "UP045",  # Optional[X] -> X | None — same reason
 ]
 
 [lint.per-file-ignores]

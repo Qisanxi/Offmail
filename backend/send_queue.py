@@ -14,14 +14,15 @@ from __future__ import annotations
 import asyncio
 import logging
 from datetime import datetime, timedelta, timezone
+from email.utils import parseaddr
 from typing import Optional
 
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from .config import settings
 from .db import get_db
-from .models import MAX_SEND_ATTEMPTS, Draft, DraftStatus, Email
+from .models import MAX_SEND_ATTEMPTS, Draft, DraftStatus, Email, EmailCategory
 from .smtp_sender import send_email_async
 
 logger = logging.getLogger(__name__)
@@ -36,30 +37,65 @@ def _backoff_seconds(attempts: int) -> int:
     return base * (2 ** max(0, attempts - 1))
 
 
-def get_sendable_drafts(db: Session, limit: int = 10) -> list[Draft]:
-    """Return drafts eligible for sending: APPROVED + FAILED-with-backoff-elapsed.
+def _as_utc(dt: datetime | None) -> datetime | None:
+    """SQLite returns naive datetimes; everything we store is UTC."""
+    if dt is None:
+        return None
+    return dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt.astimezone(timezone.utc)
 
-    We don't include SENDING here (those are in-flight). We DO include
-    FAILED drafts whose backoff window has elapsed, so they auto-retry.
+
+def is_retry_due(draft: Draft, now: datetime | None = None) -> bool:
+    """True if a FAILED draft's exponential backoff window has elapsed."""
+    now = now or datetime.now(timezone.utc)
+    last = _as_utc(draft.last_attempt_at)
+    if last is None:
+        return True
+    return now >= last + timedelta(seconds=_backoff_seconds(draft.attempts or 1))
+
+
+def get_sendable_drafts(db: Session, limit: int = 10) -> list[Draft]:
+    """Return drafts eligible for sending: APPROVED + FAILED whose backoff elapsed.
+
+    SENDING drafts are in-flight and never returned here.
     """
     now = datetime.now(timezone.utc)
     stmt = (
         select(Draft)
         .where(
             (Draft.status == DraftStatus.APPROVED)
-            | (
-                (Draft.status == DraftStatus.FAILED)
-                & (Draft.attempts < MAX_SEND_ATTEMPTS)
-                & (
-                    (Draft.last_attempt_at.is_(None))
-                    | (Draft.last_attempt_at <= now - timedelta(seconds=1))
-                )
-            )
+            | ((Draft.status == DraftStatus.FAILED) & (Draft.attempts < MAX_SEND_ATTEMPTS))
         )
         .order_by(Draft.approved_at.asc().nulls_last(), Draft.created_at.asc())
-        .limit(limit)
+        .limit(limit * 5)
     )
-    return list(db.scalars(stmt))
+    due = [
+        d for d in db.scalars(stmt)
+        if d.status == DraftStatus.APPROVED or is_retry_due(d, now)
+    ]
+    return due[:limit]
+
+
+def recover_interrupted_sends() -> int:
+    """Called at startup: any draft still SENDING belongs to a dead process.
+
+    The SMTP call may or may not have completed, so we do NOT auto-retry
+    (that could double-send). They go to DEAD with an explanatory message so
+    the user can check their Sent folder and retry manually.
+    """
+    with get_db() as db:
+        result = db.execute(
+            update(Draft)
+            .where(Draft.status == DraftStatus.SENDING)
+            .values(
+                status=DraftStatus.DEAD,
+                error_message=(
+                    "Interrupted while sending. Check your Gmail Sent folder "
+                    "before retrying — it may already have gone out."
+                ),
+            )
+        )
+        db.commit()
+        return result.rowcount or 0
 
 
 def claim_draft(db: Session, draft_id: str) -> bool:
@@ -81,6 +117,33 @@ def claim_draft(db: Session, draft_id: str) -> bool:
     return result.rowcount > 0
 
 
+def _is_linkedin_domain(address: str | None) -> bool:
+    addr = parseaddr(address or "")[1].lower()
+    domain = addr.rsplit("@", 1)[-1] if "@" in addr else ""
+    return domain == "linkedin.com" or domain.endswith(".linkedin.com")
+
+
+def resolve_recipient(email: Email) -> tuple[str | None, str | None, str | None]:
+    """Decide where a reply goes. Returns (to_address, reply_to, error).
+
+    Reply-To is attacker-controlled, so it is only honoured for genuine
+    LinkedIn acceptance mail whose Reply-To is itself a linkedin.com address.
+    Anything else is replied to the From address (or refused).
+    """
+    if email.category == EmailCategory.LINKEDIN_ACCEPTED:
+        reply_to = parseaddr(email.reply_to or "")[1]
+        if reply_to and _is_linkedin_domain(reply_to):
+            return reply_to, reply_to, None
+        return None, None, (
+            "This LinkedIn email has no valid linkedin.com Reply-To address, so it "
+            "can't be routed as a DM. Copy the draft into LinkedIn instead."
+        )
+    to_address = parseaddr(email.from_address or "")[1]
+    if not to_address:
+        return None, None, "No recipient address on this email."
+    return to_address, None, None
+
+
 async def try_send_draft(draft: Draft, db: Session) -> tuple[bool, Optional[str]]:
     """Attempt to send one draft. Returns (success, error_message).
 
@@ -93,11 +156,9 @@ async def try_send_draft(draft: Draft, db: Session) -> tuple[bool, Optional[str]
     if not email:
         return False, "No linked email for this draft."
 
-    # Determine recipient: prefer reply_to (LinkedIn routing), fall back to from_address
-    reply_to = email.reply_to
-    to_address = reply_to or email.from_address
-    if not to_address:
-        return False, "No recipient address (no reply_to and no from_address)."
+    to_address, reply_to, problem = resolve_recipient(email)
+    if problem:
+        return False, problem
 
     try:
         await send_email_async(
@@ -166,7 +227,6 @@ async def flush_queue_once() -> dict:
                     logger.warning("Failed draft %s: %s", draft.id, err)
         # Count remaining queued (approved + failed-non-dead)
         with get_db() as db:
-            from sqlalchemy import func
             remaining = db.scalar(
                 select(func.count(Draft.id)).where(
                     Draft.status.in_([DraftStatus.APPROVED, DraftStatus.FAILED])
@@ -193,19 +253,24 @@ async def queue_loop() -> None:
         await asyncio.sleep(settings.queue_retry_seconds)
 
 
-def retry_failed_drafts() -> int:
-    """Reset FAILED (non-DEAD) drafts back to APPROVED for immediate retry.
+def retry_failed_drafts(include_dead: bool = False) -> int:
+    """Reset FAILED drafts back to APPROVED for immediate retry.
 
-    DEAD drafts are NOT touched (user must explicitly want them retried).
+    DEAD drafts (retries exhausted, or interrupted mid-send) are only touched
+    when include_dead=True, which also resets their attempt counter. Check
+    your Sent folder first — an interrupted draft may already have gone out.
     """
+    statuses = [DraftStatus.FAILED] + ([DraftStatus.DEAD] if include_dead else [])
     with get_db() as db:
+        values = {
+            "status": DraftStatus.APPROVED,
+            "last_attempt_at": datetime.now(timezone.utc) - timedelta(seconds=3600),
+        }
+        if include_dead:
+            values["attempts"] = 0
+            values["error_message"] = None
         result = db.execute(
-            update(Draft)
-            .where(Draft.status == DraftStatus.FAILED)
-            .values(
-                status=DraftStatus.APPROVED,
-                last_attempt_at=datetime.now(timezone.utc) - timedelta(seconds=3600),
-            )
+            update(Draft).where(Draft.status.in_(statuses)).values(**values)
         )
         db.commit()
         return result.rowcount or 0

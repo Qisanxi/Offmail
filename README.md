@@ -2,7 +2,6 @@
 
 [![CI](https://github.com/Qisanxi/Offmail/actions/workflows/test.yml/badge.svg)](https://github.com/Qisanxi/Offmail/actions/workflows/test.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![React Router](https://img.shields.io/badge/react%20router-7-ca3838.svg)](https://reactrouter.com/)
 [![Model: Gemma 3 1B](https://img.shields.io/badge/LLM-Gemma%203%201B-orange)](https://ai.google.dev/gemma)
 [![Hacktoberfest 2026](https://img.shields.io/badge/Hacktoberfest-2026-purple)](https://hacktoberfest.com)
 [![Local-first](https://img.shields.io/badge/architecture-local--first-success)](#why-this-exists)
@@ -11,24 +10,6 @@
 >Offmail reads your Gmail's Social tab locally, detects LinkedIn "connection accepted" emails, drafts a personalized reply using **Gemma 3 1B** running on your laptop via Ollama, and you hit send — routed via LinkedIn's `reply-to` email address so it lands as a LinkedIn DM. Your inbox never leaves your machine.
 
 Submitted for the **Hacktoberfest 2026 Weekend DEV Challenge** — theme: *Build for a Friend*.
-
----
-
-## Table of contents
-
-- [Why this exists](#why-this-exists)
-- [Architecture diagram](#architecture-diagram)
-- [User flow diagram](#user-flow-diagram)
-- [Quickstart](#quickstart)
-- [How it works](#how-it-works)
-- [Project structure](#project-structure)
-- [Hacktoberfest compliance](#hacktoberfest-compliance)
-- [Roadmap](#roadmap)
-- [Privacy & security](#privacy--security)
-- [Contributing](#contributing)
-- [License](#license)
-
----
 
 ## Why this exists
 
@@ -230,7 +211,8 @@ If you approve a draft while offline, SMTP fails — but the draft stays in the 
 ### Security model
 - **Bound to 127.0.0.1 only** — not exposed to LAN
 - **TrustedHostMiddleware** rejects requests with foreign Host headers (DNS-rebinding defense)
-- **Per-install X-Offmail-Token header** required on all mutating routes (CSRF defense — cross-site POSTs can't set custom headers)
+- **Per-install X-Offmail-Token header** required on every route that touches inbox data or sends mail (CSRF defense — cross-site requests can't set custom headers). The Vite dev proxy adds it from `.offmail_token`, so the token never reaches browser JavaScript
+- **Reply-To is only trusted for genuine LinkedIn mail** — replies are routed to a `reply+…@linkedin.com` address only when the email came from linkedin.com; anything else goes to the original sender
 - **Header injection rejected** — EmailMessage with modern policy + manual CR/LF stripping
 
 ---
