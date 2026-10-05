@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/Qisanxi/Offmail/actions/workflows/test.yml/badge.svg)](https://github.com/Qisanxi/Offmail/actions/workflows/test.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![React Router](https://img.shields.io/badge/react%20router-7-ca3838.svg)](https://reactrouter.com/)
 [![Model: Gemma 3 1B](https://img.shields.io/badge/LLM-Gemma%203%201B-orange)](https://ai.google.dev/gemma)
 [![Hacktoberfest 2026](https://img.shields.io/badge/Hacktoberfest-2026-purple)](https://hacktoberfest.com)
 [![Local-first](https://img.shields.io/badge/architecture-local--first-success)](#why-this-exists)
@@ -262,25 +263,27 @@ offmail/
 │   ├── requirements.txt
 │   └── tests/                # 25 tests (classifier, smoke, smtp_sender)
 │
-├── frontend/                  # React + Vite 8 (Oxc) + Tailwind v4 (JavaScript, no TS)
-│   ├── index.html
+├── frontend/                  # React + Vite 8 + Tailwind v4 (JavaScript, no TS)
+│   ├── index.html             # Single Vite entry — renders <App /> with React Router
 │   ├── vite.config.js        # Vite + React (Oxc) + Tailwind v4 plugins
+│   ├── vercel.json           # SPA routing fallback (so /app works on direct visit)
 │   ├── package.json
 │   └── src/
 │       ├── main.jsx          # React entry
-│       ├── App.jsx           # main shell
+│       ├── App.jsx           # <BrowserRouter> + <Routes> — /, /app
 │       ├── index.css        # Tailwind v4 (CSS-first config via @theme + @utility)
 │       ├── lib/api.js        # API client with JSDoc types
+│       ├── pages/
+│       │   ├── HomePage.jsx  # Marketing landing page (dark theme)
+│       │   └── AppPage.jsx   # Inbox triage UI (the actual app)
+│       ├── styles/
+│       │   └── landing.css   # Homepage dark-theme styles (imported by HomePage.jsx)
 │       └── components/
 │           ├── InboxList.jsx
 │           ├── EmailCard.jsx
 │           ├── SendQueue.jsx
 │           ├── HealthBar.jsx
 │           └── Badges.jsx
-│
-├── homepage/                  # Vercel marketing homepage
-│   ├── index.html
-│   └── styles.css
 │
 └── docs/
     ├── ARCHITECTURE.md       # detailed design notes for DEV post
@@ -319,13 +322,15 @@ offmail/
 ## Roadmap
 
 ### v1 (current — Hacktoberfest submission)
-- ✅ Reads Gmail Social tab via IMAP
-- ✅ Regex classifier (LinkedIn accepted / needs-reply / FYI)
+- ✅ Single React app with React Router: `/` (homepage) + `/app` (triage interface)
+- ✅ Reads Gmail Social category via IMAP + X-GM-RAW search
+- ✅ Sender-restricted regex classifier (LinkedIn accepted / needs-reply / FYI)
 - ✅ Drafts with Gemma 3 1B via Ollama (local)
 - ✅ User reviews → approves → queued
-- ✅ Background sender flushes queue every 60s
+- ✅ Background sender with atomic claim (no double-send) + exponential backoff retry
 - ✅ Offline-first: drafts queue when offline, auto-send on reconnect
 - ✅ Reply routes via LinkedIn's reply-to email → lands as LinkedIn DM
+- ✅ Security: 127.0.0.1 bind, TrustedHostMiddleware, per-install X-Offmail-Token (CSRF defense)
 
 ### v2 (post-Hacktoberfest)
 - Tauri-based desktop installer (one-click install instead of `git clone + make run`)
@@ -334,7 +339,7 @@ offmail/
 - OAuth for Gmail (instead of app passwords)
 - Switch SQLite → Postgres (already installed) for multi-user sync
 - Optional encrypted cross-device sync server (Render)
-- **React Router** for multi-page navigation (settings, history, contacts pages)
+- Additional routes: /settings (Gmail creds, Ollama model picker), /history (sent drafts archive), /contacts (per-person draft history)
 
 ### v3
 - Mobile companion (React Native + llama.cpp for on-device inference)
