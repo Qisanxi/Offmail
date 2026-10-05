@@ -1,268 +1,179 @@
 import { Link } from "react-router-dom";
 import "../styles/landing.css";
 
+const REPO = "https://github.com/Qisanxi/Offmail";
+
+// The app needs the local backend, so "Open the app" only makes sense when this
+// page is served from your own machine. On a hosted copy we point at the repo.
+const IS_LOCAL =
+  typeof window !== "undefined" && ["localhost", "127.0.0.1"].includes(window.location.hostname);
+
 export function HomePage() {
   return (
-    <>
-      {/* Top airmail ribbon — the brand's visual signature, appears on every page */}
-      <div className="airmail-ribbon" aria-hidden="true" />
-
-      <header className="nav">
-        <div className="nav-inner">
-          <Link to="/" className="brand">
-            <div className="brand-mark">OM</div>
-            <span>Offmail</span>
+    <div className="lp theme-dark">
+      <header className="lp-nav">
+        <div className="lp-wrap lp-nav-inner">
+          <Link to="/" className="lp-brand">
+            <span className="lp-mark" aria-hidden="true">OM</span>
+            Offmail
           </Link>
-          <nav>
-            <a href="#why">Why</a>
+          <nav className="lp-nav-links" aria-label="Main">
             <a href="#how">How it works</a>
-            <a href="#install">Install</a>
-            <a
-              href="https://github.com/Qisanxi/Offmail"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              GitHub
-            </a>
-            <Link to="/app" className="nav-cta">
-              Open app
-            </Link>
+            <a href="#run">Run it</a>
+            <a href={REPO} target="_blank" rel="noopener noreferrer">GitHub</a>
           </nav>
         </div>
       </header>
 
-      {/* =================== HERO =================== */}
-      {/* Split layout: copy on left, live product mockup on right.
-          The mockup shows the actual UI — inbox + draft + outbox with the
-          animated airmail stripe. This makes the value prop VISIBLE. */}
-      <section className="hero">
-        <div className="hero-grid">
-          <div className="hero-copy">
-            <div className="hero-eyebrow">
-              <span className="airmail-dot" aria-hidden="true" />
-              Local-first · open-source AI
-            </div>
-            <h1>
-              Reply to recruiters
-              <br />
-              <span className="grad">without handing them</span>
-              <br />
-              your inbox.
-            </h1>
-            <p className="lede">
-              Offmail reads your Gmail locally, drafts warm replies with{" "}
-              <strong>Gemma 3 1B</strong> on your laptop, and queues them in an{" "}
-              <em>offline outbox</em> that sends the moment you reconnect. No
-              cloud, no API keys, no $20/month forever.
-            </p>
-
-            <div className="cta-row">
-              <Link to="/app" className="btn btn-primary">
-                Try the live demo
-                <span className="arrow" aria-hidden="true">→</span>
-              </Link>
-              <a
-                href="https://github.com/Qisanxi/Offmail"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn btn-secondary"
-              >
-                View source
-              </a>
-            </div>
-
-            <div className="hero-stats">
-              <div>
-                <strong>0</strong>
-                <span>cloud servers we control</span>
-              </div>
-              <div>
-                <strong>1B</strong>
-                <span>open-weight model</span>
-              </div>
-              <div>
-                <strong>$0</strong>
-                <span>cost, forever</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Product mockup — what the user will actually see when they click "Open app" */}
-          <div className="hero-mockup" aria-hidden="true">
-            <ProductMockup />
-          </div>
-        </div>
-      </section>
-
-      {/* =================== WHY — closed vs open comparison =================== */}
-      <section id="why" className="section">
-        <div className="section-inner">
-          <div className="section-eyebrow">Why this exists</div>
-          <h2>Closed inbox AI reads your mail on their server. Offmail doesn&rsquo;t.</h2>
-          <p className="section-lede">
-            Superhuman, Shortwave, and friends all want $20&ndash;30 a month to read your recruiter
-            conversations in their cloud. Offmail runs entirely on your laptop — no servers we
-            control, no per-seat billing, no telemetry.
-          </p>
-
-          <div className="comparison">
-            <div className="comparison-row comparison-header">
-              <div>What you want</div>
-              <div className="comparison-closed">Closed SaaS</div>
-              <div className="comparison-open">Offmail</div>
-            </div>
-            <div className="comparison-row">
-              <div>Your data lives&hellip;</div>
-              <div className="comparison-closed">on their servers</div>
-              <div className="comparison-open">on your laptop</div>
-            </div>
-            <div className="comparison-row">
-              <div>Works offline</div>
-              <div className="comparison-closed">no</div>
-              <div className="comparison-open">yes</div>
-            </div>
-            <div className="comparison-row">
-              <div>Swap models freely</div>
-              <div className="comparison-closed">no — their model, their rules</div>
-              <div className="comparison-open">yes — any Ollama model</div>
-            </div>
-            <div className="comparison-row">
-              <div>Audit how your data is used</div>
-              <div className="comparison-closed">no</div>
-              <div className="comparison-open">yes — code&rsquo;s on GitHub</div>
-            </div>
-            <div className="comparison-row">
-              <div>Monthly cost</div>
-              <div className="comparison-closed">$20&ndash;30</div>
-              <div className="comparison-open">$0</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* =================== HOW — horizontal flow =================== */}
-      <section id="how" className="section section-alt">
-        <div className="section-inner">
-          <div className="section-eyebrow">How it works</div>
-          <h2>Six steps. All local. None of them ask you to trust a third party.</h2>
-
-          <div className="flow">
-            <FlowStep
-              num="1"
-              title="Poll Gmail"
-              body="IMAP + Gmail's X-GM-RAW search grabs the Social category — where LinkedIn acceptance emails land."
-            />
-            <FlowStep
-              num="2"
-              title="Classify"
-              body="Sender-restricted regex tags each email: LinkedIn accepted, needs reply, or FYI. No LLM tokens spent on this."
-            />
-            <FlowStep
-              num="3"
-              title="Draft"
-              body="Gemma 3 1B via Ollama writes a short, warm reply. ~10&ndash;20s on a 4GB laptop. Fully offline."
-            />
-            <FlowStep
-              num="4"
-              title="You approve"
-              body="Edit if you like. See where the reply will go before you hit approve — no surprises."
-            />
-            <FlowStep
-              num="5"
-              title="Queue"
-              body="Atomic claim prevents double-send. Exponential backoff on failure. Offline? Sends when network returns."
-            />
-            <FlowStep
-              num="6"
-              title="Lands as DM"
-              body="Reply routes via LinkedIn's reply-to email address — arrives as a LinkedIn message. No API, no scraping."
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* =================== INSTALL =================== */}
-      <section id="install" className="section">
-        <div className="section-inner">
-          <div className="section-eyebrow">Install</div>
-          <h2>5-minute setup. No server, no SaaS.</h2>
-          <p className="section-lede">
-            Runs on any laptop with 4GB+ RAM. Python 3.10+, Node 22.12+, and{" "}
-            <a href="https://ollama.ai" target="_blank" rel="noopener noreferrer">
-              Ollama
-            </a>{" "}
-            installed.
-          </p>
-
-          <div className="install-grid">
-            <div className="install-block">
-              <div className="install-step-label">01</div>
-              <h3>Clone &amp; configure</h3>
-              <pre><code>{`git clone https://github.com/Qisanxi/Offmail.git
-cd Offmail
-cp .env.example .env
-# Edit .env — add your Gmail address + 16-char app password`}</code></pre>
-            </div>
-
-            <div className="install-block">
-              <div className="install-step-label">02</div>
-              <h3>Pull the model</h3>
-              <pre><code>{`ollama pull gemma3:1b`}</code></pre>
-              <p className="note">~800MB, one-time. After this, the model runs fully offline.</p>
-            </div>
-
-            <div className="install-block">
-              <div className="install-step-label">03</div>
-              <h3>Run</h3>
-              <pre><code>{`make setup    # installs Python + Node deps
-make run      # starts FastAPI + React + Ollama check`}</code></pre>
-              <p className="note">
-                Open{" "}
-                <a href="http://localhost:5173">http://localhost:5173</a> — you&rsquo;re on this page.
-                Click <strong>Open app</strong> to start triaging.
+      <main>
+        <section className="lp-hero">
+          <div className="lp-wrap lp-hero-grid">
+            <div>
+              <h1 className="lp-h1">Every new connection deserves a reply.</h1>
+              <p className="lp-lede">
+                Offmail finds the LinkedIn &ldquo;accepted your invitation&rdquo; emails in your Gmail,
+                drafts a short thank-you on your own laptop, and sends it when you approve.
+                It keeps working offline.
               </p>
+              <div className="lp-cta">
+                {IS_LOCAL ? (
+                  <Link to="/app" className="btn-primary lp-btn">Open the app</Link>
+                ) : (
+                  <a href={REPO} target="_blank" rel="noopener noreferrer" className="btn-primary lp-btn">
+                    Get it on GitHub
+                  </a>
+                )}
+                <a href="#run" className="btn-secondary lp-btn">Run it yourself</a>
+              </div>
+            </div>
+            <div>
+              <AppPreview />
+              <p className="lp-sample">Sample data.</p>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* =================== CTA =================== */}
-      <section className="section section-cta">
-        <div className="section-inner">
-          <div className="airmail-divider" aria-hidden="true" />
-          <h2>Open for everyone.</h2>
-          <p>
-            Offmail keeps your inbox on your laptop where it belongs — no third-party servers, no
-            monthly bills, no API keys to manage. Fork it, swap models, extend it for your own
-            workflow.
-          </p>
-          <div className="cta-row">
-            <Link to="/app" className="btn btn-primary">
-              Open the app
-              <span className="arrow" aria-hidden="true">→</span>
-            </Link>
-            <a
-              href="https://github.com/Qisanxi/Offmail"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn btn-secondary"
-            >
-              Star on GitHub
-            </a>
+        <section className="lp-section">
+          <div className="lp-wrap">
+            <div className="lp-trio">
+              <div>
+                <h3>Drafts stay on your machine</h3>
+                <p>A small model, Gemma 3 1B, runs through Ollama here. No AI service sees your email.</p>
+              </div>
+              <div>
+                <h3>The outbox waits for you</h3>
+                <p>Approve replies on a plane. They go out from your own Gmail when you&rsquo;re back online.</p>
+              </div>
+              <div>
+                <h3>You send every reply</h3>
+                <p>Nothing leaves without your approval, and you see where each reply goes first.</p>
+              </div>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <footer>
-        <div className="airmail-ribbon footer-ribbon" aria-hidden="true" />
-        <div className="footer-inner">
-          <div>
-            <strong>Offmail</strong> &mdash; local-first email triage.
+        <section id="how" className="lp-section">
+          <div className="lp-wrap">
+            <h2 className="lp-h2">How it works</h2>
+            <div className="lp-steps">
+              <div className="lp-step">
+                <div>
+                  <h3>Refresh</h3>
+                  <p>Offmail reads your Gmail Social tab and picks out connection and reply-worthy emails.</p>
+                </div>
+              </div>
+              <div className="lp-step">
+                <div>
+                  <h3>Review</h3>
+                  <p>Edit the draft, or rewrite it shorter, warmer, more formal or more casual.</p>
+                </div>
+              </div>
+              <div className="lp-step">
+                <div>
+                  <h3>Approve</h3>
+                  <p>The reply joins the outbox and sends from your Gmail, through the reply address on the email.</p>
+                </div>
+              </div>
+            </div>
           </div>
-          <div>MIT License &middot; Powered by Gemma 3 1B via Ollama</div>
+        </section>
+
+        <section id="run" className="lp-section">
+          <div className="lp-wrap">
+            <h2 className="lp-h2">Run it on your laptop</h2>
+            <pre className="lp-code"><code>{`git clone ${REPO}.git && cd Offmail
+cp .env.example .env     # add your Gmail address and app password
+ollama pull gemma3:1b
+make setup && make run`}</code></pre>
+            <p className="lp-note">
+              Needs Python 3.10+, Node 20.19+ or 22.12+, Ollama, and a Gmail{" "}
+              <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer">app password</a>.
+              Full steps are in the{" "}
+              <a href={`${REPO}#readme`} target="_blank" rel="noopener noreferrer">README</a>.
+            </p>
+          </div>
+        </section>
+      </main>
+
+      <footer className="lp-footer">
+        <div className="lp-wrap lp-footer-inner">
+          <span>Offmail &middot; MIT license</span>
+          <a href={REPO} target="_blank" rel="noopener noreferrer">GitHub</a>
         </div>
       </footer>
-    </>
+    </div>
+  );
+}
+
+// A static picture of the real app, built from the same classes and tokens so it
+// can't drift from the product. Not interactive, hidden from assistive tech.
+function AppPreview() {
+  return (
+    <div
+      className="lp-preview"
+      role="img"
+      aria-label="Preview of Offmail: an inbox list, a drafted reply to a LinkedIn connection, and the outbox with one reply queued"
+    >
+      <div aria-hidden="true">
+        <div className="lp-preview-bar">
+          <span className="status-dot-ok" /> Gmail
+          <span className="status-dot-ok" style={{ marginLeft: 8 }} /> gemma3:1b
+        </div>
+        <div className="lp-preview-body">
+          <div className="lp-preview-rail">
+            <div className="lp-preview-row row-marker-linkedin" style={{ background: "var(--color-row-selected)" }}>
+              Priya Patel <small>Technical recruiter at Northwind</small>
+            </div>
+            <div className="lp-preview-row row-marker-linkedin">
+              Marcus Chen <small>Engineering manager at Lumen</small>
+            </div>
+            <div className="lp-preview-row row-marker-reply">
+              Ana Silva <small>Question for you</small>
+            </div>
+            <div className="lp-preview-dock">
+              <div className="airmail-strip airmail-strip-live" />
+              <p><strong>Outbox</strong> 1 queued</p>
+            </div>
+          </div>
+          <div className="lp-preview-pane theme-light">
+            <h3 className="lp-preview-name">Priya Patel</h3>
+            <p className="lp-preview-sub">Technical recruiter at Northwind</p>
+            <p className="lp-preview-quote">You are now connected. Say hello and start a conversation.</p>
+            <p className="alert-inline alert-info" style={{ marginBottom: 12 }}>
+              <span>→</span><span><strong>Sends as a LinkedIn message</strong></span>
+            </p>
+            <div className="sheet lp-preview-draft">
+              Hi Priya, thanks for connecting! I&rsquo;d love to hear more about the ML roles your
+              team is hiring for. Happy to chat next week if that works.
+            </div>
+            <div className="lp-preview-actions">
+              <span className="btn-primary text-sm">Approve &amp; queue</span>
+              <span className="btn-ghost text-sm">Dismiss</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 

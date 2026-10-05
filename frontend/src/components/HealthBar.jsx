@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { api } from "../lib/api";
 
-// HealthBar — collapsed into small status dots when everything is fine.
-// Expanded into a full banner ONLY when something is wrong.
-export function HealthBar() {
+// useHealth polls /api/health. The header shows <HealthDots>; <HealthNotice>
+// only appears (with the fix) when something needs attention.
+export function useHealth() {
   const [health, setHealth] = useState(null);
   const [error, setError] = useState(null);
 
@@ -28,68 +28,85 @@ export function HealthBar() {
     };
   }, []);
 
+  return { health, error };
+}
+
+function describe({ health, error }) {
   if (error) {
-    return (
-      <div className="alert-inline alert-error text-xs mb-3">
-        <span aria-hidden="true">!</span>
-        <span>Backend unreachable: {error}</span>
-      </div>
-    );
+    return {
+      items: [{ key: "backend", dot: "status-dot-error", label: "Backend offline" }],
+      notice: { tone: "alert-error", body: <>Backend unreachable: {error}</> },
+    };
   }
-  if (!health) return null;
+  if (!health) return { items: [], notice: null };
 
-  const gmailOk = health.gmail_configured;
-  const ollamaOk = health.ollama.status === "ok";
-  const ollamaNeedsPull = health.ollama.status === "model_not_pulled";
-  const allOk = gmailOk && ollamaOk;
+  const items = [];
+  let notice = null;
 
-  // When everything is fine: small dots inline, no full-width banners.
-  if (allOk) {
-    return (
-      <div
-        className="flex items-center gap-3 text-xs mb-3"
-        style={{ color: "var(--color-ink-muted)" }}
-        aria-label="All systems ready"
-      >
-        <span className="flex items-center gap-1.5">
-          <span className="status-dot-ok" aria-hidden="true" />
-          Gmail
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="status-dot-ok" aria-hidden="true" />
-          {health.model}
-        </span>
-      </div>
-    );
+  if (health.gmail_configured) {
+    items.push({ key: "gmail", dot: "status-dot-ok", label: "Gmail" });
+  } else {
+    items.push({ key: "gmail", dot: "status-dot-warn", label: "Gmail not set up" });
+    notice = {
+      tone: "alert-warn",
+      body: (
+        <>
+          Add <code>GMAIL_ADDRESS</code> and <code>GMAIL_APP_PASSWORD</code> to <code>.env</code>, then restart.
+        </>
+      ),
+    };
   }
 
-  // Something needs attention — expand into banners.
+  const status = health.ollama.status;
+  if (status === "ok") {
+    items.push({ key: "llm", dot: "status-dot-ok", label: health.model });
+  } else if (status === "model_not_pulled") {
+    items.push({ key: "llm", dot: "status-dot-warn", label: "Model missing" });
+    notice = notice || {
+      tone: "alert-warn",
+      body: (
+        <>
+          Run <code>ollama pull {health.ollama.needs_pull}</code>.
+        </>
+      ),
+    };
+  } else {
+    items.push({ key: "llm", dot: "status-dot-error", label: "Ollama offline" });
+    notice = notice || {
+      tone: "alert-error",
+      body: (
+        <>
+          Start Ollama with <code>ollama serve</code>.
+        </>
+      ),
+    };
+  }
+
+  return { items, notice };
+}
+
+export function HealthDots({ health, error }) {
+  const { items } = describe({ health, error });
+  if (items.length === 0) return null;
   return (
-    <div className="mb-3 space-y-1.5">
-      {!gmailOk && (
-        <div className="alert-inline alert-info text-xs">
-          <span className="status-dot-warn" aria-hidden="true" />
-          <span>
-            Gmail not configured &mdash; set <code>GMAIL_ADDRESS</code> + <code>GMAIL_APP_PASSWORD</code> in <code>.env</code>
-          </span>
-        </div>
-      )}
-      {ollamaNeedsPull && (
-        <div className="alert-inline alert-info text-xs">
-          <span className="status-dot-warn" aria-hidden="true" />
-          <span>
-            Run <code>ollama pull {health.ollama.needs_pull}</code> to download the model.
-          </span>
-        </div>
-      )}
-      {!ollamaOk && !ollamaNeedsPull && (
-        <div className="alert-inline alert-error text-xs">
-          <span className="status-dot-error" aria-hidden="true" />
-          <span>
-            Ollama unreachable &mdash; is <code>ollama serve</code> running?
-          </span>
-        </div>
-      )}
+    <ul className="flex items-center gap-3 text-xs" style={{ color: "var(--color-ink-muted)" }} aria-label="System status">
+      {items.map((i) => (
+        <li key={i.key} className="flex items-center gap-1.5">
+          <span className={i.dot} aria-hidden="true" />
+          <span className="hidden sm:inline">{i.label}</span>
+          <span className="sr-only sm:hidden">{i.label}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+export function HealthNotice({ health, error }) {
+  const { notice } = describe({ health, error });
+  if (!notice) return null;
+  return (
+    <div className={`alert-inline ${notice.tone} rounded-none text-xs px-4 sm:px-6`} role="status">
+      <span>{notice.body}</span>
     </div>
   );
 }
