@@ -241,6 +241,7 @@ export function AppPage({ demo = false }) {
           filter={filter}
           setFilter={setFilter}
           handleSelect={handleSelect}
+          onBack={() => setSelected(null)}
           refreshKey={refreshKey}
           isOnline={isOnline}
           isSending={isSending}
@@ -261,6 +262,7 @@ export function AppPage({ demo = false }) {
           filter={filter}
           setFilter={setFilter}
           handleSelect={handleSelect}
+          onBack={() => setSelected(null)}
           refreshKey={refreshKey}
           isOnline={isOnline}
           isSending={isSending}
@@ -283,6 +285,7 @@ function AppBody({
   filter,
   setFilter,
   handleSelect,
+  onBack,
   refreshKey,
   isOnline,
   isSending,
@@ -319,7 +322,7 @@ function AppBody({
         <EmailCard
           email={selected}
           onDraftUpdated={handleDraftUpdated}
-          onBack={() => setSelected(null)}
+          onBack={onBack}
           demo={demo}
         />
       </main>
