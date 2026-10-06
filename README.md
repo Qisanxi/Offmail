@@ -15,9 +15,10 @@ Submitted for the **Hacktoberfest 2026 Weekend DEV Challenge** — theme: *Build
 # 🎥 Demo Video
 
 > **Video Link** : (https://youtu.be/xfp9BkdUpX0?si=6PghaHGxsBLSOUQ0)
-
-
 ---
+---
+# Live Links
+> **URL : (https://offmail-seven.vercel.app/#get)
 
 ## Why Offmail 
 
@@ -367,8 +368,4 @@ MIT — see [LICENSE](LICENSE). Fork it, ship it, make it yours.
 
 ---
 
-## Built for Arpit
-
-> *"He sends 20+ connection requests a week. When recruiters and founders accept, he means to reply — but the friction kills the moment. Offmail removes the friction, and keeps his inbox on his laptop where it belongs."*
-
-Built with 💙 for the **Hacktoberfest 2026 Weekend DEV Challenge** — theme: *Build for a Friend*.
+>Built with 💙 for the **Hacktoberfest 2026 Weekend DEV Challenge** — theme: *Build for a Friend*.
