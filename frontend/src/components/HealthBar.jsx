@@ -5,13 +5,30 @@ import * as demoApi from "../lib/demo-api";
 // useHealth polls /api/health. The header shows <HealthDots>; <HealthNotice>
 // only appears (with the fix) when something needs attention.
 // In demo mode, uses the in-browser mock API instead of the backend.
-export function useHealth(demo = false) {
+//
+// Returns:
+//   { health, error, state }
+//   where state is one of:
+//     'loading'      — no response yet, ≤2s elapsed
+//     'ready'        — backend reachable (health response received)
+//     'unreachable' — backend not responding after 2s, OR fetch errored
+//
+// The 2s timeout avoids leaving the user on a blank page if the backend
+// is offline — AppPage uses `state` to swap in an install panel.
+export function useHealth(demo = false, reloadKey = 0) {
   const api = demo ? demoApi.api : realApi;
   const [health, setHealth] = useState(null);
   const [error, setError] = useState(null);
+  const [initialTimedOut, setInitialTimedOut] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
+
+    // Reset state when reloadKey changes (user clicked "Retry connection")
+    setHealth(null);
+    setError(null);
+    setInitialTimedOut(false);
+
     async function load() {
       try {
         const h = await api.health();
@@ -24,14 +41,29 @@ export function useHealth(demo = false) {
       }
     }
     load();
+
+    // After 2s with no response, flip the state to 'unreachable' so
+    // AppPage can swap in the install panel instead of hanging.
+    const timeoutId = setTimeout(() => {
+      if (!cancelled) setInitialTimedOut(true);
+    }, 2000);
+
     const t = setInterval(load, 15000);
     return () => {
       cancelled = true;
+      clearTimeout(timeoutId);
       clearInterval(t);
     };
-  }, [api]);
+  }, [api, reloadKey]);
 
-  return { health, error };
+  // Derive the state. 'ready' wins if we have health; 'unreachable' if
+  // we have an error OR timed out with no response; 'loading' otherwise.
+  let state;
+  if (health) state = "ready";
+  else if (error || initialTimedOut) state = "unreachable";
+  else state = "loading";
+
+  return { health, error, state };
 }
 
 function describe({ health, error }) {

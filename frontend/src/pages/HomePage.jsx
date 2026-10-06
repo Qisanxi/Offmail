@@ -51,6 +51,13 @@ export function HomePage() {
               <p className="lp-cta-note">
                 The demo runs in your browser — no install, no signup, no data sent. Works on mobile.
               </p>
+              {IS_LOCAL && (
+                <p className="lp-cta-note lp-cta-subtext">
+                  First time running the local app?{" "}
+                  <a href="#run">See the 5-minute setup</a> — clone, install Ollama, pull Gemma 3 1B, then{" "}
+                  <code>make run</code>.
+                </p>
+              )}
             </div>
             <div>
               <AppPreview />

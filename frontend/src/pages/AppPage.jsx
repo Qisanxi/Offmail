@@ -7,6 +7,7 @@ import { InboxList } from "../components/InboxList";
 import { Outbox } from "../components/Outbox";
 import { HealthDots, HealthNotice, useHealth } from "../components/HealthBar";
 import { DemoBanner } from "../components/DemoBanner";
+import { AppUnreachable, AppLoading } from "../components/AppUnreachable";
 
 const CATEGORY_LABELS = {
   all: "All",
@@ -29,11 +30,18 @@ export function AppPage({ demo = false }) {
   const [refreshError, setRefreshError] = useState(null);
   const [stats, setStats] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [healthRetryKey, setHealthRetryKey] = useState(0);
   const [isOnline, setIsOnline] = useState(
     demo ? !demoApi.isOfflineNow() : (typeof navigator !== "undefined" ? navigator.onLine : true)
   );
   const [isSending, setIsSending] = useState(false);
-  const healthState = useHealth(demo);
+  const healthState = useHealth(demo, healthRetryKey);
+
+  // When user clicks "Retry connection" on the unreachable panel,
+  // bump the key so useHealth re-runs its effect from scratch.
+  const handleRetry = useCallback(() => {
+    setHealthRetryKey((k) => k + 1);
+  }, []);
 
   // Track previous "sending" count to detect when we just started sending (animates outbox edge)
   const prevSendingRef = useRef(0);
@@ -221,39 +229,100 @@ export function AppPage({ demo = false }) {
         </div>
       )}
 
-      <div className="app-body">
-        {/* Inbox rail: list on top, outbox docked underneath. On phones the rail is hidden while an email is open. */}
-        <aside className={`app-rail theme-dark ${selected ? "hidden lg:flex" : "flex"}`}>
-          <div role="tablist" aria-label="Filter emails" className="flex px-2 overflow-x-auto" style={{ borderBottom: "1px solid var(--color-border-soft)" }}>
-            {Object.keys(CATEGORY_LABELS).map((key) => (
-              <button
-                key={key}
-                role="tab"
-                aria-selected={filter === key}
-                onClick={() => setFilter(key)}
-                className="filter-tab"
-              >
-                {CATEGORY_LABELS[key]}
-              </button>
-            ))}
-          </div>
-          <div className="rail-list">
-            <InboxList emails={emails} selectedId={selected?.id || null} onSelect={handleSelect} />
-          </div>
-          <div className="rail-dock">
-            <Outbox refreshKey={refreshKey} isOnline={isOnline} isSending={isSending} demo={demo} />
-          </div>
-        </aside>
+      {/* Gate the body render based on backend reachability.
+          - demo mode: always render (mock API never fails)
+          - non-demo + loading: brief skeleton (≤2s)
+          - non-demo + unreachable: install panel + retry + demo fallback
+          - non-demo + ready: the actual inbox UI */}
+      {demo ? (
+        <AppBody
+          emails={emails}
+          selected={selected}
+          filter={filter}
+          setFilter={setFilter}
+          handleSelect={handleSelect}
+          refreshKey={refreshKey}
+          isOnline={isOnline}
+          isSending={isSending}
+          handleDraftUpdated={handleDraftUpdated}
+          handleRefresh={handleRefresh}
+          refreshing={refreshing}
+          demo={demo}
+          categoryLabels={CATEGORY_LABELS}
+        />
+      ) : healthState.state === "loading" ? (
+        <AppLoading />
+      ) : healthState.state === "unreachable" ? (
+        <AppUnreachable onRetry={handleRetry} />
+      ) : (
+        <AppBody
+          emails={emails}
+          selected={selected}
+          filter={filter}
+          setFilter={setFilter}
+          handleSelect={handleSelect}
+          refreshKey={refreshKey}
+          isOnline={isOnline}
+          isSending={isSending}
+          handleDraftUpdated={handleDraftUpdated}
+          handleRefresh={handleRefresh}
+          refreshing={refreshing}
+          demo={demo}
+          categoryLabels={CATEGORY_LABELS}
+        />
+      )}
+    </div>
+  );
+}
 
-        <main className={`app-pane ${selected ? "block" : "hidden lg:block"}`}>
-          <EmailCard
-            email={selected}
-            onDraftUpdated={handleDraftUpdated}
-            onBack={() => setSelected(null)}
-            demo={demo}
-          />
-        </main>
-      </div>
+// AppBody — the actual inbox + email + outbox UI. Extracted so the
+// loading/unreachable fallbacks can replace it cleanly.
+function AppBody({
+  emails,
+  selected,
+  filter,
+  setFilter,
+  handleSelect,
+  refreshKey,
+  isOnline,
+  isSending,
+  handleDraftUpdated,
+  categoryLabels,
+  demo,
+}) {
+  return (
+    <div className="app-body">
+      {/* Inbox rail: list on top, outbox docked underneath. On phones the rail is hidden while an email is open. */}
+      <aside className={`app-rail theme-dark ${selected ? "hidden lg:flex" : "flex"}`}>
+        <div role="tablist" aria-label="Filter emails" className="flex px-2 overflow-x-auto" style={{ borderBottom: "1px solid var(--color-border-soft)" }}>
+          {Object.keys(categoryLabels).map((key) => (
+            <button
+              key={key}
+              role="tab"
+              aria-selected={filter === key}
+              onClick={() => setFilter(key)}
+              className="filter-tab"
+            >
+              {categoryLabels[key]}
+            </button>
+          ))}
+        </div>
+        <div className="rail-list">
+          <InboxList emails={emails} selectedId={selected?.id || null} onSelect={handleSelect} />
+        </div>
+        <div className="rail-dock">
+          <Outbox refreshKey={refreshKey} isOnline={isOnline} isSending={isSending} demo={demo} />
+        </div>
+      </aside>
+
+      <main className={`app-pane ${selected ? "block" : "hidden lg:block"}`}>
+        <EmailCard
+          email={selected}
+          onDraftUpdated={handleDraftUpdated}
+          onBack={() => setSelected(null)}
+          demo={demo}
+        />
+      </main>
     </div>
   );
 }
