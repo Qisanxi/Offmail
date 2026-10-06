@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { api } from "../lib/api";
+import { api as realApi } from "../lib/api";
+import * as demoApi from "../lib/demo-api";
 import { EmailCard } from "../components/EmailCard";
 import { InboxList } from "../components/InboxList";
 import { Outbox } from "../components/Outbox";
 import { HealthDots, HealthNotice, useHealth } from "../components/HealthBar";
+import { DemoBanner } from "../components/DemoBanner";
 
 const CATEGORY_LABELS = {
   all: "All",
@@ -14,7 +16,12 @@ const CATEGORY_LABELS = {
   unknown: "Other",
 };
 
-export function AppPage() {
+function useApi(demo) {
+  return demo ? demoApi.api : realApi;
+}
+
+export function AppPage({ demo = false }) {
+  const api = useApi(demo);
   const [emails, setEmails] = useState([]);
   const [selected, setSelected] = useState(null);
   const [filter, setFilter] = useState("all");
@@ -23,10 +30,10 @@ export function AppPage() {
   const [stats, setStats] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [isOnline, setIsOnline] = useState(
-    typeof navigator !== "undefined" ? navigator.onLine : true
+    demo ? !demoApi.isOfflineNow() : (typeof navigator !== "undefined" ? navigator.onLine : true)
   );
   const [isSending, setIsSending] = useState(false);
-  const healthState = useHealth();
+  const healthState = useHealth(demo);
 
   // Track previous "sending" count to detect when we just started sending (animates outbox edge)
   const prevSendingRef = useRef(0);
@@ -79,6 +86,15 @@ export function AppPage() {
 
   // Online/offline detection — drives the outbox's "X replies waiting" copy
   useEffect(() => {
+    if (demo) {
+      // In demo mode, subscribe to the mock API's offline state changes
+      const unsub = demoApi.subscribe(() => {
+        setIsOnline(!demoApi.isOfflineNow());
+        loadStats();
+        setRefreshKey((k) => k + 1);
+      });
+      return unsub;
+    }
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
     window.addEventListener("online", handleOnline);
@@ -87,7 +103,18 @@ export function AppPage() {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
-  }, []);
+  }, [demo, loadStats]);
+
+  // Demo offline toggle handler
+  const handleToggleOffline = useCallback(
+    (newValue) => {
+      if (demo) {
+        demoApi.setOffline(newValue);
+        setIsOnline(!newValue);
+      }
+    },
+    [demo]
+  );
 
   // Periodic refresh while drafts are pending — so user sees when the outbox sends them
   useEffect(() => {
@@ -181,6 +208,10 @@ export function AppPage() {
         </div>
       </header>
 
+      {demo && (
+        <DemoBanner isOffline={!isOnline} onToggleOffline={handleToggleOffline} />
+      )}
+
       {refreshError && (
         <div className="alert-inline alert-error rounded-none px-4 sm:px-6" role="alert">
           <span>Refresh failed: {refreshError}</span>
@@ -210,7 +241,7 @@ export function AppPage() {
             <InboxList emails={emails} selectedId={selected?.id || null} onSelect={handleSelect} />
           </div>
           <div className="rail-dock">
-            <Outbox refreshKey={refreshKey} isOnline={isOnline} isSending={isSending} />
+            <Outbox refreshKey={refreshKey} isOnline={isOnline} isSending={isSending} demo={demo} />
           </div>
         </aside>
 
@@ -219,6 +250,7 @@ export function AppPage() {
             email={selected}
             onDraftUpdated={handleDraftUpdated}
             onBack={() => setSelected(null)}
+            demo={demo}
           />
         </main>
       </div>

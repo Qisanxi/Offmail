@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { api } from "../lib/api";
+import { api as realApi } from "../lib/api";
+import * as demoApi from "../lib/demo-api";
 import { DraftStatusBadge } from "./Badges";
+
+const _resolveApi = (demo) => (demo ? demoApi.api : realApi);
 
 const WORD_LIMIT = 80;
 const REGEN_VARIANTS = [
@@ -14,7 +17,8 @@ const REGEN_VARIANTS = [
 //   email: EmailOut | null
 //   onDraftUpdated: () => void
 //   onBack: () => void   (mobile: return to the list)
-export function EmailCard({ email, onDraftUpdated, onBack }) {
+export function EmailCard({ email, onDraftUpdated, onBack, demo = false }) {
+  const api = _resolveApi(demo);
   const [draft, setDraft] = useState("");
   const [draftId, setDraftId] = useState(null);
   const [draftStatus, setDraftStatus] = useState(null);

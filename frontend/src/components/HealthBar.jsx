@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
-import { api } from "../lib/api";
+import { api as realApi } from "../lib/api";
+import * as demoApi from "../lib/demo-api";
 
 // useHealth polls /api/health. The header shows <HealthDots>; <HealthNotice>
 // only appears (with the fix) when something needs attention.
-export function useHealth() {
+// In demo mode, uses the in-browser mock API instead of the backend.
+export function useHealth(demo = false) {
+  const api = demo ? demoApi.api : realApi;
   const [health, setHealth] = useState(null);
   const [error, setError] = useState(null);
 
@@ -26,7 +29,7 @@ export function useHealth() {
       cancelled = true;
       clearInterval(t);
     };
-  }, []);
+  }, [api]);
 
   return { health, error };
 }

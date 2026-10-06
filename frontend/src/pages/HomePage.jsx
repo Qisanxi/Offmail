@@ -36,15 +36,21 @@ export function HomePage() {
                 It keeps working offline.
               </p>
               <div className="lp-cta">
+                <Link to="/demo" className="btn-primary lp-btn">
+                  Try the demo
+                  <span aria-hidden="true"> →</span>
+                </Link>
                 {IS_LOCAL ? (
-                  <Link to="/app" className="btn-primary lp-btn">Open the app</Link>
+                  <Link to="/app" className="btn-secondary lp-btn">Open the local app</Link>
                 ) : (
-                  <a href={REPO} target="_blank" rel="noopener noreferrer" className="btn-primary lp-btn">
+                  <a href={REPO} target="_blank" rel="noopener noreferrer" className="btn-secondary lp-btn">
                     Get it on GitHub
                   </a>
                 )}
-                <a href="#run" className="btn-secondary lp-btn">Run it yourself</a>
               </div>
+              <p className="lp-cta-note">
+                The demo runs in your browser — no install, no signup, no data sent. Works on mobile.
+              </p>
             </div>
             <div>
               <AppPreview />

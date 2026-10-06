@@ -1,13 +1,17 @@
 import { useEffect, useState } from "react";
-import { api } from "../lib/api";
+import { api as realApi } from "../lib/api";
+import * as demoApi from "../lib/demo-api";
 import { DraftStatusBadge } from "./Badges";
+
+const _resolveApi = (demo) => (demo ? demoApi.api : realApi);
 
 // Outbox — the one distinctive element of Offmail. It sits at the bottom of the
 // inbox rail. The airmail strip on its top edge is dim at rest and only moves
 // while a reply is actually being sent.
 //
-// Props: refreshKey (bump to reload), isOnline, isSending
-export function Outbox({ refreshKey, isOnline, isSending }) {
+// Props: refreshKey (bump to reload), isOnline, isSending, demo (use mock API)
+export function Outbox({ refreshKey, isOnline, isSending, demo = false }) {
+  const api = _resolveApi(demo);
   const [drafts, setDrafts] = useState([]);
   const [flushing, setFlushing] = useState(false);
   const [open, setOpen] = useState(true);

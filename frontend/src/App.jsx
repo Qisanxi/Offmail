@@ -7,7 +7,8 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<HomePage />} />
-        <Route path="/app" element={<AppPage />} />
+        <Route path="/app" element={<AppPage demo={false} />} />
+        <Route path="/demo" element={<AppPage demo={true} />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
